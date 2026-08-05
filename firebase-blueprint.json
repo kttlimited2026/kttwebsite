@@ -10,7 +10,7 @@
         "emoji": { "type": "string" },
         "number": { "type": "string" },
         "numColor": { "type": "string" },
-        "stripe": { "type": "string" },
+        "topBarGradient": { "type": "string" },
         "iconBg": { "type": "string" },
         "title": { "type": "string" },
         "sub": { "type": "string" },

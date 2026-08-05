@@ -11,7 +11,7 @@ export interface Service {
   emoji: string;
   number: string;
   numColor: string;
-  stripe: string;
+  topBarGradient: string;
   iconBg: string;
   title: string;
   sub: string;

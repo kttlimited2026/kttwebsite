@@ -318,12 +318,12 @@ export default function CleaningItemCalculator({
                   </div>
                 )}
 
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap", paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-                  <span style={{ color: isSelected ? "#39FF14" : "#888", fontSize: 12, fontWeight: 700, minWidth: 0, flex: "1 1 auto" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.06)", width: "100%", boxSizing: "border-box" }}>
+                  <span style={{ color: isSelected ? "#39FF14" : "#888", fontSize: 12, fontWeight: 700, minWidth: 0, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {isSelected ? `Subtotal: ₦${subtotal.toLocaleString()}` : item.category}
                   </span>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
                     <button
                       type="button"
                       className="laundry-qty-btn"
@@ -332,6 +332,11 @@ export default function CleaningItemCalculator({
                         background: "#222",
                         border: "1px solid #444",
                         color: "#fff",
+                        width: 32,
+                        height: 32,
+                        minWidth: 32,
+                        flexShrink: 0,
+                        padding: 0
                       }}
                     >
                       -
@@ -350,6 +355,12 @@ export default function CleaningItemCalculator({
                         background: isSelected ? "#0A200A" : "#1A1A1A",
                         border: isSelected ? "1px solid #39FF14" : "1px solid #333",
                         color: isSelected ? "#39FF14" : "#fff",
+                        width: 38,
+                        height: 32,
+                        minWidth: 38,
+                        flexShrink: 0,
+                        padding: 0,
+                        textAlign: "center"
                       }}
                     />
                     <button
@@ -360,6 +371,11 @@ export default function CleaningItemCalculator({
                         background: "rgba(57, 255, 20, 0.15)",
                         border: "1px solid #39FF14",
                         color: "#39FF14",
+                        width: 32,
+                        height: 32,
+                        minWidth: 32,
+                        flexShrink: 0,
+                        padding: 0
                       }}
                     >
                       +

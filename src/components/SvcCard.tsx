@@ -11,7 +11,7 @@ export default function SvcCard({ s, onBook }: { s: Service; onBook: () => void;
 
   return (
     <div className={`svc-card ${s.cardClass}`} onClick={onBook}>
-      <div className="svc-stripe" style={{ background: s.stripe }} />
+      <div className="svc-stripe" style={{ background: s.topBarGradient || (s as any).stripe }} />
       
       {/* 3D Featured Image / Media Showcase Container */}
       {activeMedia ? (

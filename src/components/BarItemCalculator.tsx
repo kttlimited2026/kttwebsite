@@ -308,12 +308,12 @@ export default function BarItemCalculator({
                   </span>
                 </div>
 
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap", paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-                  <span style={{ color: isSelected ? "#FFBB00" : "#888", fontSize: 12, fontWeight: 700, minWidth: 0, flex: "1 1 auto" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.06)", width: "100%", boxSizing: "border-box" }}>
+                  <span style={{ color: isSelected ? "#FFBB00" : "#888", fontSize: 12, fontWeight: 700, minWidth: 0, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {isSelected ? `Subtotal: ₦${subtotal.toLocaleString()}` : item.category}
                   </span>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
                     <button
                       type="button"
                       className="laundry-qty-btn"
@@ -322,6 +322,11 @@ export default function BarItemCalculator({
                         background: "#222",
                         border: "1px solid #444",
                         color: "#fff",
+                        width: 32,
+                        height: 32,
+                        minWidth: 32,
+                        flexShrink: 0,
+                        padding: 0
                       }}
                     >
                       -
@@ -340,6 +345,12 @@ export default function BarItemCalculator({
                         background: isSelected ? "#261D00" : "#1A1A1A",
                         border: isSelected ? "1px solid #FFBB00" : "1px solid #333",
                         color: isSelected ? "#FFBB00" : "#fff",
+                        width: 38,
+                        height: 32,
+                        minWidth: 38,
+                        flexShrink: 0,
+                        padding: 0,
+                        textAlign: "center"
                       }}
                     />
                     <button
@@ -350,6 +361,11 @@ export default function BarItemCalculator({
                         background: "rgba(255, 187, 0, 0.2)",
                         border: "1px solid #FFBB00",
                         color: "#FFBB00",
+                        width: 32,
+                        height: 32,
+                        minWidth: 32,
+                        flexShrink: 0,
+                        padding: 0
                       }}
                     >
                       +

@@ -34,8 +34,15 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
 
   const [promoError, setPromoError] = useState("");
 
-  const h = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => 
-    setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+  const h = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    if (name === "phone" || name === "altPhone") {
+      const cleaned = value.replace(/[^0-9]/g, "").slice(0, 11);
+      setForm(f => ({ ...f, [name]: cleaned }));
+    } else {
+      setForm(f => ({ ...f, [name]: value }));
+    }
+  };
 
   const targetEmail = settings?.email || "Chatkttlimited@gmail.com";
 
@@ -159,15 +166,62 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
   const currentSubtotal = basePrice + expressPrice;
   const isMinOrderMet = currentSubtotal >= referralMinOrderVal;
 
-  const handleApplyPromo = () => {
+  const handleApplyPromo = async () => {
     setPromoError("");
-    if (!referralCode.trim()) return;
+    const codeClean = referralCode.trim().toUpperCase();
+    if (!codeClean) return;
 
     if (!form.service) {
       setPromoError("Please select a service first to verify minimum order eligibility.");
+      setPromoApplied(false);
       return;
     }
 
+    const refDigits = codeClean.replace(/[^0-9]/g, "");
+    const userPhoneDigits = (form.phone || "").replace(/[^0-9]/g, "");
+
+    // 1. Prevent self-referral
+    if (userPhoneDigits && refDigits && userPhoneDigits === refDigits) {
+      setPromoError("⚠️ Self-referral is not allowed. You cannot use your own phone number as a referral code.");
+      setPromoApplied(false);
+      return;
+    }
+
+    // 2. Format validation
+    const prefix = (settings?.referralCodePrefix || "REF").toUpperCase();
+    const isPrefixFormat = codeClean.startsWith(prefix + "-") && refDigits.length >= 10;
+    const isPhoneFormat = refDigits.length === 11 && (
+      refDigits.startsWith("070") || 
+      refDigits.startsWith("080") || 
+      refDigits.startsWith("081") || 
+      refDigits.startsWith("090") || 
+      refDigits.startsWith("091") || 
+      refDigits.startsWith("071")
+    );
+    const isSpecialCode = ["WELCOME1000", "KTT1000", "KTT2026", "DISCOUNT1000", "REF1000"].includes(codeClean);
+
+    // Also check if code exists in past bookings/referrals database
+    let isValidInDB = false;
+    if (!isPrefixFormat && !isPhoneFormat && !isSpecialCode) {
+      try {
+        const bookings = await dbService.getBookings();
+        isValidInDB = bookings.some(b => {
+          const bPhone = (b.phone || "").replace(/[^0-9]/g, "");
+          const bRef = (b.referralCodeApplied || "").trim().toUpperCase();
+          return (bPhone && bPhone === refDigits) || (bRef && bRef === codeClean);
+        });
+      } catch (err) {
+        console.error("Referral DB check error:", err);
+      }
+    }
+
+    if (!isPrefixFormat && !isPhoneFormat && !isSpecialCode && !isValidInDB) {
+      setPromoError("⚠️ Invalid referral code. Please enter a valid 11-digit phone number or referral code (e.g. REF-08160880608 or 08160880608).");
+      setPromoApplied(false);
+      return;
+    }
+
+    // 3. Minimum order validation
     if (!isMinOrderMet) {
       setPromoError(`⚠️ Referral code requires a minimum order of ₦${referralMinOrderVal.toLocaleString()}. Your current subtotal is ₦${currentSubtotal.toLocaleString()}.`);
       setPromoApplied(false);
@@ -268,8 +322,15 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
       return;
     }
 
-    if (!form.phone) {
-      alert("Please enter a valid Phone Number for payment receipt & dispatch updates.");
+    const sanitizedPhone = (form.phone || "").replace(/[^0-9]/g, "");
+    if (!sanitizedPhone || sanitizedPhone.length !== 11) {
+      alert(`⚠️ Please enter a valid 11-digit Nigerian phone number (e.g. 08160880608). Current length: ${sanitizedPhone.length} digit(s).`);
+      return;
+    }
+
+    const sanitizedAltPhone = (form.altPhone || "").replace(/[^0-9]/g, "");
+    if (sanitizedAltPhone && sanitizedAltPhone.length !== 11) {
+      alert(`⚠️ Alternative phone number must be a valid 11-digit Nigerian number (e.g. 08012345678) or left empty. Current length: ${sanitizedAltPhone.length} digit(s).`);
       return;
     }
 
@@ -277,43 +338,91 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
 
     const generatedRef = `KTT-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const paystackPublicKey = settings?.paystackPublicKey || "pk_live_7bdb2390c39862dbc3699090128503bde566ab45";
-
     const paystackEmail = form.email || (form.phone ? `${form.phone.replace(/[^0-9]/g, '')}@kingstreattech.com` : `customer-${Date.now()}@kingstreattech.com`);
 
+    // Helper to dynamically load Paystack Inline JS script if not present
+    const loadPaystackInlineScript = (): Promise<boolean> => {
+      return new Promise((resolve) => {
+        if ((window as any).PaystackPop) {
+          resolve(true);
+          return;
+        }
+        const existingScript = document.getElementById("paystack-js-script");
+        if (existingScript) {
+          existingScript.addEventListener("load", () => resolve(true));
+          existingScript.addEventListener("error", () => resolve(false));
+          return;
+        }
+        const script = document.createElement("script");
+        script.id = "paystack-js-script";
+        script.src = "https://js.paystack.co/v1/inline.js";
+        script.async = true;
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+      });
+    };
+
+    const scriptLoaded = await loadPaystackInlineScript();
     const paystackPop = (window as any).PaystackPop;
-    if (paystackPop && typeof paystackPop.setup === "function") {
+
+    if (scriptLoaded && paystackPop) {
       try {
-        const handler = paystackPop.setup({
-          key: paystackPublicKey,
-          email: paystackEmail,
-          amount: Math.round(estimatedTotal * 100), // in kobo
-          ref: generatedRef,
-          currency: "NGN",
-          metadata: {
-            custom_fields: [
-              { display_name: "Customer Name", variable_name: "customer_name", value: form.name },
-              { display_name: "Service Ordered", variable_name: "service", value: form.service },
-              { display_name: "Phone", variable_name: "phone", value: form.phone },
-              { display_name: "Delivery Address", variable_name: "address", value: form.address }
-            ]
-          },
-          callback: async function(response: { reference: string }) {
-            const finalRef = response.reference || generatedRef;
-            await finalizePaidBooking(finalRef);
-          },
-          onClose: function() {
-            setLoading(false);
-            alert("Payment pop-up was closed. Online payment is required to confirm your booking.");
+        if (typeof paystackPop.setup === "function") {
+          const handler = paystackPop.setup({
+            key: paystackPublicKey,
+            email: paystackEmail,
+            amount: Math.round(estimatedTotal * 100), // in kobo
+            ref: generatedRef,
+            currency: "NGN",
+            metadata: {
+              custom_fields: [
+                { display_name: "Customer Name", variable_name: "customer_name", value: form.name },
+                { display_name: "Service Ordered", variable_name: "service", value: form.service },
+                { display_name: "Phone", variable_name: "phone", value: form.phone },
+                { display_name: "Delivery Address", variable_name: "address", value: form.address }
+              ]
+            },
+            callback: async function(response: { reference: string }) {
+              const finalRef = response.reference || generatedRef;
+              await finalizePaidBooking(finalRef);
+            },
+            onClose: function() {
+              setLoading(false);
+              alert("Payment pop-up was closed. Online payment is required to confirm your booking.");
+            }
+          });
+          if (handler && typeof handler.openIframe === "function") {
+            handler.openIframe();
+            return;
           }
-        });
-        handler.openIframe();
+        } else if (typeof paystackPop === "function") {
+          const popup = new paystackPop();
+          if (typeof popup.newTransaction === "function") {
+            popup.newTransaction({
+              key: paystackPublicKey,
+              email: paystackEmail,
+              amount: Math.round(estimatedTotal * 100),
+              ref: generatedRef,
+              currency: "NGN",
+              onSuccess: async (transaction: any) => {
+                const finalRef = transaction.reference || generatedRef;
+                await finalizePaidBooking(finalRef);
+              },
+              onCancel: () => {
+                setLoading(false);
+                alert("Payment was cancelled.");
+              }
+            });
+            return;
+          }
+        }
       } catch (err) {
         console.error("Paystack setup error:", err);
-        fallbackInitialize(generatedRef);
       }
-    } else {
-      fallbackInitialize(generatedRef);
     }
+
+    await fallbackInitialize(generatedRef);
   };
 
   const fallbackInitialize = async (ref: string) => {
@@ -334,16 +443,21 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
         })
       });
 
+      const contentType = response.headers.get("content-type");
+      if (!response.ok || !contentType || !contentType.includes("application/json")) {
+        throw new Error("API server response not JSON");
+      }
+
       const data = await response.json();
       if (data.status && data.data?.authorization_url) {
         window.location.href = data.data.authorization_url;
       } else {
-        alert(data.message || "Failed to initialize Paystack payment. Please check network and try again.");
+        alert(data.message || "Failed to initialize Paystack payment. Please check your network connection and try again.");
         setLoading(false);
       }
     } catch (err) {
       console.error("Paystack fallback init error:", err);
-      alert("Error contacting payment gateway. Please try again or contact support.");
+      alert("Unable to open Paystack payment window directly. Please try tapping 'Pay on Paystack' again or contact Kings Treat Tech support on WhatsApp (+234 816 088 0608).");
       setLoading(false);
     }
   };
@@ -463,17 +577,45 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
           <h2 className="fd" style={{fontSize:20,marginBottom:6,color:"#fff"}}>Booking Details</h2>
           <p style={{color:"#888",fontSize:13,fontWeight:300,marginBottom:24}}>Fields marked * are required. You will receive an instant confirmation.</p>
           <div className="fg">
-            {[
-              {l:"Full Name *",n:"name",ph:"Your full name"},
-              {l:"Delivery Address *",n:"address",ph:"Full delivery / service address in Abuja"},
-              {l:"Phone Number *",n:"phone",ph:"08160880608",t:"tel"},
-              {l:"Alternative Phone Number",n:"altPhone",ph:"e.g. 08012345678 (Optional)",t:"tel"}
-            ].map(f=>(
-              <div key={f.n} className="f">
-                <label>{f.l}</label>
-                <input className="fi" name={f.n} type={f.t||"text"} placeholder={f.ph} value={(form as any)[f.n]} onChange={h}/>
-              </div>
-            ))}
+            <div className="f">
+              <label>Full Name *</label>
+              <input className="fi" name="name" type="text" placeholder="Your full name" value={form.name} onChange={h} />
+            </div>
+
+            <div className="f">
+              <label>Delivery Address *</label>
+              <input className="fi" name="address" type="text" placeholder="Full delivery / service address in Abuja" value={form.address} onChange={h} />
+            </div>
+
+            <div className="f">
+              <label>Phone Number (11 Digits) *</label>
+              <input
+                className="fi"
+                name="phone"
+                type="tel"
+                inputMode="numeric"
+                maxLength={11}
+                placeholder="08160880608"
+                value={form.phone}
+                onChange={h}
+              />
+              <small style={{ color: "#39FF14", fontSize: 11, marginTop: 2 }}>🇳🇬 11-digit Nigerian number (e.g. 08160880608)</small>
+            </div>
+
+            <div className="f">
+              <label>Alternative Phone Number (11 Digits)</label>
+              <input
+                className="fi"
+                name="altPhone"
+                type="tel"
+                inputMode="numeric"
+                maxLength={11}
+                placeholder="08012345678 (Optional)"
+                value={form.altPhone}
+                onChange={h}
+              />
+              <small style={{ color: "#888", fontSize: 11, marginTop: 2 }}>Optional 11-digit backup phone number</small>
+            </div>
             <div className="f"><label>Service *</label>
               <select className="fi" name="service" value={form.service} onChange={h}>
                 <option value="">Select a service</option>

@@ -23,7 +23,7 @@ const LABELS: Record<string, string> = { home: "Home", about: "About Us", servic
 // Default data for seeding
 const DEFAULT_SERVICES: Service[] = [
   { id:"food", cardClass:"food", label:"FOOD DELIVERY", emoji:"🍽️", number:"01",
-    numColor:"#39FF14", stripe:"linear-gradient(90deg,#39FF14,#2BC710)",
+    numColor:"#39FF14", topBarGradient:"linear-gradient(90deg,#39FF14,#2BC710)",
     iconBg:"#0D1F0D", title:"Hot Meals at Your Door", sub:"Order from top restaurants near you",
     description:"Fast, hot gourmet meal delivery straight to your doorstep. We partner with top-rated local kitchens and chefs in Abuja.",
     tap:"Tap to order food instantly", btnLabel:"Order Food Now", btnBg:"#39FF14", btnColor:"#0A0A0A",
@@ -37,7 +37,7 @@ const DEFAULT_SERVICES: Service[] = [
       { url: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=600&auto=format&fit=crop", type: "image", name: "Asian Noodle Bowl" }
     ] },
   { id:"laundry", cardClass:"laundry", label:"DRY CLEANING & LAUNDRY", emoji:"👔", number:"02",
-    numColor:"#FF5E00", stripe:"linear-gradient(90deg,#FF5E00,#CC4C00)",
+    numColor:"#FF5E00", topBarGradient:"linear-gradient(90deg,#FF5E00,#CC4C00)",
     iconBg:"#1F0D00", title:"Pickup, Clean & Return", sub:"Professional garment care at your pace",
     description:"Premium laundry, dry cleaning, pressing, and fabric stain care. Free doorstep pickup and delivery across Abuja.",
     tap:"Tap to book a pickup", btnLabel:"Book Pickup Now", btnBg:"#FF5E00", btnColor:"#FFFFFF",
@@ -51,7 +51,7 @@ const DEFAULT_SERVICES: Service[] = [
       { url: "https://images.unsplash.com/photo-1489274495757-95c7c837b101?w=600&auto=format&fit=crop", type: "image", name: "Steam Ironing" }
     ] },
   { id:"cleaning", cardClass:"cleaning", label:"HOME & OFFICE CLEANING", emoji:"🏠", number:"03",
-    numColor:"#39FF14", stripe:"linear-gradient(90deg,#39FF14,#2BC710)",
+    numColor:"#39FF14", topBarGradient:"linear-gradient(90deg,#39FF14,#2BC710)",
     iconBg:"#0D1F0D", title:"Spotless Results, Every Time", sub:"Vetted professional cleaners",
     description:"Deep cleaning for apartments, private homes, and corporate offices. Includes sanitize, dusting, floor scrubbing, and glass polish.",
     tap:"Tap to book a cleaner", btnLabel:"Book Cleaning Now", btnBg:"#39FF14", btnColor:"#0A0A0A",
@@ -65,7 +65,7 @@ const DEFAULT_SERVICES: Service[] = [
       { url: "https://images.unsplash.com/photo-1563453392212-326f5e854473?w=600&auto=format&fit=crop", type: "image", name: "Eco Cleaning Kit" }
     ] },
   { id:"bar", cardClass:"bar", label:"BAR & DRINKS MENU", emoji:"🍾", number:"04",
-    numColor:"#FFBB00", stripe:"linear-gradient(90deg,#FFBB00,#D49B00)",
+    numColor:"#FFBB00", topBarGradient:"linear-gradient(90deg,#FFBB00,#D49B00)",
     iconBg:"#1F1A00", title:"Chilled Beers, Spirits & Wines", sub:"Cold beers, liquor bottles & fine wine delivered",
     description:"Chilled beers, stout, whisky, cognac, tequila, rum, and fine wines delivered directly to your doorstep or event in Abuja.",
     tap:"Tap to order drinks instantly", btnLabel:"Order Drinks Now", btnBg:"#FFBB00", btnColor:"#0A0A0A",
