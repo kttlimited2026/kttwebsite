@@ -1,0 +1,16 @@
+{
+  "name": "Kings Treat Tech",
+  "short_name": "KTT",
+  "description": "Everything Home, One Platform. Food, Laundry, and Cleaning services in Abuja.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0A0A",
+  "theme_color": "#FF5E00",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/color/512/crown.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

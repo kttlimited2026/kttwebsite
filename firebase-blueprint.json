@@ -1,0 +1,115 @@
+{
+  "entities": {
+    "Service": {
+      "title": "Service",
+      "description": "A service offered by KTT (Food, Laundry, etc.)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "emoji": { "type": "string" },
+        "number": { "type": "string" },
+        "numColor": { "type": "string" },
+        "stripe": { "type": "string" },
+        "iconBg": { "type": "string" },
+        "title": { "type": "string" },
+        "sub": { "type": "string" },
+        "tap": { "type": "string" },
+        "btnLabel": { "type": "string" },
+        "btnBg": { "type": "string" },
+        "btnColor": { "type": "string" },
+        "featColor": { "type": "string" },
+        "barColor": { "type": "string" },
+        "basePrice": { "type": "string" },
+        "deliveryFee": { "type": "string" },
+        "minOrder": { "type": "string" },
+        "features": { "type": "array", "items": { "type": "string" } },
+        "media": { 
+          "type": "array", 
+          "items": { 
+            "type": "object", 
+            "properties": {
+              "url": { "type": "string" },
+              "type": { "type": "string" },
+              "name": { "type": "string" }
+            }
+          } 
+        }
+      },
+      "required": ["label", "title"]
+    },
+    "Plan": {
+      "title": "Plan",
+      "description": "Subscription plan for KTT services",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "string" },
+        "period": { "type": "string" },
+        "cta": { "type": "string" },
+        "ctaClass": { "type": "string" },
+        "featured": { "type": "boolean" },
+        "badge": { "type": "string" },
+        "features": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["name", "price"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "A service booking request from a customer",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "service": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "address": { "type": "string" },
+        "notes": { "type": "string" },
+        "status": { "type": "string", "enum": ["new", "confirmed", "done", "cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "service"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Global site settings",
+      "type": "object",
+      "properties": {
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "address": { "type": "string" },
+        "monSat": { "type": "string" },
+        "sunday": { "type": "string" },
+        "holidays": { "type": "string" },
+        "instagram": { "type": "string" },
+        "facebook": { "type": "string" },
+        "twitter": { "type": "string" },
+        "tiktok": { "type": "string" },
+        "banner": { "type": "string" },
+        "bannerLink": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "services/{serviceId}": {
+      "schema": "Service",
+      "description": "Catalog of available services"
+    },
+    "plans/{planId}": {
+      "schema": "Plan",
+      "description": "Available subscription plans"
+    },
+    "bookings/{bookingId}": {
+      "schema": "Booking",
+      "description": "User bookings"
+    },
+    "settings/global": {
+      "schema": "Settings",
+      "description": "Application wide settings"
+    }
+  }
+}

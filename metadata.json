@@ -1,0 +1,6 @@
+{
+  "name": "Kings Treat Tech",
+  "description": "Premium multi-service platform for food delivery, laundry, and professional cleaning services.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
