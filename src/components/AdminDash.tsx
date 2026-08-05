@@ -99,6 +99,7 @@ export default function AdminDash({
 
   const [tab, setTab] = useState(visibleTabs[0]?.id || "overview");
   const [saved, setSaved] = useState(false);
+  const [showAdminPass, setShowAdminPass] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
 
   // Form state for adding sub-admin
@@ -1406,10 +1407,33 @@ export default function AdminDash({
               <div className="af"><label>Public Holidays</label><input value={settings.holidays || ""} onChange={e => updSetting("holidays", e.target.value)} placeholder="e.g. 9am – 10pm" /></div>
             </div>
             <div className="settings-card">
-              <h3>📢 Announcement Banner</h3>
-              {(["banner", "bannerLink"] as const).map((k) => (
-                <div key={k} className="af"><label>{k}</label><input value={settings[k] || ""} onChange={e => updSetting(k, e.target.value)} /></div>
-              ))}
+              <h3>📢 Announcement &amp; Hero Banner Settings</h3>
+              <div className="af">
+                <label>Top Announcement Banner Text (Text displayed across top of website)</label>
+                <input value={settings.banner || ""} onChange={e => updSetting("banner", e.target.value)} placeholder="e.g. 🔥 Special Offer: 20% Off First Cleaning Order!" />
+              </div>
+              <div className="af">
+                <label>Top Banner Link (URL destination when clicked)</label>
+                <input value={settings.bannerLink || ""} onChange={e => updSetting("bannerLink", e.target.value)} placeholder="e.g. /booking or https://..." />
+              </div>
+              <div className="af">
+                <label>Hero Promotional Banner Image URL</label>
+                <input value={settings.heroBannerImage || ""} onChange={e => updSetting("heroBannerImage", e.target.value)} placeholder="Paste banner image URL (e.g. https://... or uploaded image)" />
+                <div style={{ marginTop: 8, padding: 10, background: "#111", borderRadius: 8, border: "1px solid #333", fontSize: 12, color: "#aaa" }}>
+                  <strong style={{ color: "#FF5E00" }}>💡 Recommended Image Dimensions:</strong>
+                  <ul style={{ margin: "4px 0 0 16px", padding: 0 }}>
+                    <li><strong>Product / Service Card Images:</strong> 800 x 800 px (Square 1:1) or 800 x 600 px (4:3)</li>
+                    <li><strong>Hero / Promo Banner Images:</strong> 1200 x 500 px or 1920 x 600 px (Wide Widescreen 16:5 ratio)</li>
+                    <li><strong>Max File Size:</strong> Under 2MB (JPG, PNG, or WebP) for fast page loading</li>
+                  </ul>
+                </div>
+                {settings.heroBannerImage && (
+                  <div style={{ marginTop: 10 }}>
+                    <span style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 4 }}>Banner Preview:</span>
+                    <img src={settings.heroBannerImage} alt="Hero Banner Preview" style={{ width: "100%", maxHeight: 160, objectFit: "cover", borderRadius: 8, border: "1px solid #FF5E00" }} />
+                  </div>
+                )}
+              </div>
             </div>
             <div className="settings-card">
               <h3>🎁 Referral &amp; Reward Perks</h3>
@@ -1479,15 +1503,34 @@ export default function AdminDash({
               <div style={{ marginBottom: 20, paddingBottom: 20, borderBottom: "1px solid #2A2A2A" }}>
                 <h4 style={{ fontSize: 13, color: "#FF5E00", fontWeight: 700, marginBottom: 8 }}>🔑 Admin Master Password</h4>
                 <div className="af">
-                  <label>Admin Login Password / PIN</label>
-                  <input 
-                    type="text" 
-                    value={settings.adminPassword || "admin123"} 
-                    onChange={e => updSetting("adminPassword", e.target.value)} 
-                    placeholder="Set custom admin password..." 
-                  />
-                  <span style={{ fontSize: 11, color: "#888", marginTop: 4, display: "block" }}>
-                    Used for direct password login without Google authentication. Default is <strong>admin123</strong>.
+                  <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span>Admin Login Password / PIN</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowAdminPass(!showAdminPass)}
+                      style={{ background: "none", border: "none", color: "#39FF14", fontSize: 11, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}
+                    >
+                      {showAdminPass ? "🙈 Hide Password" : "👁️ Show Password"}
+                    </button>
+                  </label>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input 
+                      type={showAdminPass ? "text" : "password"} 
+                      value={settings.adminPassword || "admin123"} 
+                      onChange={e => updSetting("adminPassword", e.target.value)} 
+                      placeholder="Set custom admin password..." 
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={save}
+                      style={{ background: "#FF5E00", color: "#fff", border: "none", padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+                    >
+                      💾 Save Password
+                    </button>
+                  </div>
+                  <span style={{ fontSize: 11, color: "#888", marginTop: 6, display: "block" }}>
+                    Used for direct password login into the Admin Portal. Keep this password safe and secure.
                   </span>
                 </div>
               </div>

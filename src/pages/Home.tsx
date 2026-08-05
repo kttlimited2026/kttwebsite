@@ -14,6 +14,12 @@ export default function Home({ svcs, plans, goTo, settings, onBookWithCode }: { 
         </div>
         <h1 className="headline">Everything Home, <br /><em>One Platform.</em></h1>
         <p className="tagline">Reliable food delivery, chilled bar &amp; drinks, professional laundry care, and premium cleaning services in Abuja.</p>
+        
+        {settings?.heroBannerImage && (
+          <div style={{ marginTop: 24, maxWidth: 900, margin: "24px auto 0", borderRadius: 16, overflow: "hidden", border: "1px solid rgba(255,94,0,0.3)", boxShadow: "0 10px 30px rgba(0,0,0,0.5)" }}>
+            <img src={settings.heroBannerImage} alt="Promotional Banner" style={{ width: "100%", maxHeight: 350, objectFit: "cover", display: "block" }} />
+          </div>
+        )}
       </div>
     </div>
 

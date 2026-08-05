@@ -67,6 +67,7 @@ export interface Settings {
   tiktok: string;
   banner: string;
   bannerLink: string;
+  heroBannerImage?: string;
   subAdmins?: SubAdmin[];
   adminPassword?: string;
   // Referral & Reward Perks Settings

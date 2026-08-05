@@ -133,6 +133,7 @@ export default function App() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [authMethod, setAuthMethod] = useState<'google' | 'password' | null>(null);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [adminRole, setAdminRole] = useState<'superadmin' | 'subadmin' | null>(null);
   const [showLogin, setShowLogin] = useState(false);
@@ -192,6 +193,7 @@ export default function App() {
       if (user && user.email) {
         const emailLower = user.email.toLowerCase();
         setCurrentUserEmail(user.email);
+        setAuthMethod('google');
         const isOwner = emailLower === "okpuorba7@gmail.com" || emailLower === "chatkttlimited@gmail.com";
         const isSub = settings.subAdmins?.some(s => s.email.toLowerCase() === emailLower);
 
@@ -206,9 +208,16 @@ export default function App() {
           setAdminRole(null);
         }
       } else {
-        setCurrentUserEmail(null);
-        setIsAdmin(false);
-        setAdminRole(null);
+        // Only clear admin state if not logged in via password method
+        setAuthMethod(prev => {
+          if (prev !== 'password') {
+            setCurrentUserEmail(null);
+            setIsAdmin(false);
+            setAdminRole(null);
+            return null;
+          }
+          return 'password';
+        });
       }
     });
 
@@ -231,6 +240,7 @@ export default function App() {
       const isSub = settings.subAdmins?.some(s => s.email.toLowerCase() === userEmail);
 
       if (isOwner || isSub) {
+        setAuthMethod('google');
         setShowLogin(false);
         setPage('admin');
       } else {
@@ -245,6 +255,7 @@ export default function App() {
   const handlePasswordLogin = (enteredPass: string) => {
     const validPassword = settings.adminPassword || "admin123";
     if (enteredPass === validPassword) {
+      setAuthMethod('password');
       setIsAdmin(true);
       setAdminRole('superadmin');
       setCurrentUserEmail('Chatkttlimited@gmail.com');
@@ -256,10 +267,11 @@ export default function App() {
   };
 
   const handleLogout = async () => {
-    await signOut(auth);
+    setAuthMethod(null);
     setIsAdmin(false);
     setAdminRole(null);
     setCurrentUserEmail(null);
+    await signOut(auth);
     goTo("home");
   };
 

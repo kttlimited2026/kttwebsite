@@ -25,7 +25,7 @@ export default function AdminLogin({
     }
     const success = onPasswordLogin(password.trim());
     if (!success) {
-      setError("Incorrect password. Default is admin123 or check Site Settings.");
+      setError("Incorrect password. Please try again or use Google Auth recovery.");
     }
   };
 
@@ -126,10 +126,6 @@ export default function AdminLogin({
         >
           Cancel
         </button>
-
-        <div className="admin-hint" style={{ marginTop: 14, fontSize: 11, color: "#666" }}>
-          Default password is <strong style={{ color: "#FF5E00" }}>admin123</strong> (Can be changed in Site Settings).
-        </div>
       </div>
     </div>
   );
