@@ -120,8 +120,9 @@ async function startServer() {
         })
       });
 
-      const data = await response.json().catch(() => ({ success: "true" }));
-      return res.json({ status: true, formsubmit: data });
+      const data = await response.json().catch(() => ({ success: "false", message: "Invalid JSON response" }));
+      console.log(`[FORM_SUBMIT RESPONSE for ${recipient}]:`, data);
+      return res.json({ status: response.ok, formsubmit: data });
     } catch (error: any) {
       console.error("Send Order Email Error:", error);
       return res.status(500).json({ status: false, message: error.message || "Failed to send email notification" });

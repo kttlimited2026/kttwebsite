@@ -395,6 +395,23 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
 
     if (scriptLoaded && paystackPop) {
       try {
+        let paymentSuccess = false;
+        const handleSuccess = async (reference: string) => {
+          paymentSuccess = true;
+          setPaidRef(reference);
+          if (docId) {
+            await dbService.updateBookingDetails(docId, {
+              paymentStatus: "paid",
+              paystackReference: reference,
+              paidAmount: estimatedTotal,
+              paidAt: new Date().toISOString()
+            });
+          }
+          sendOrderEmail({ ...bookingPayload, paymentStatus: "paid", paystackReference: reference }, docId || undefined);
+          setSent(true);
+          setLoading(false);
+        };
+
         if (typeof paystackPop.setup === "function") {
           const handler = paystackPop.setup({
             key: paystackPublicKey,
@@ -410,29 +427,37 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
                 { display_name: "Delivery Address", variable_name: "address", value: form.address }
               ]
             },
-            callback: async function(response: { reference: string }) {
-              const finalRef = response.reference || generatedRef;
-              setPaidRef(finalRef);
-              if (docId) {
-                await dbService.updateBookingDetails(docId, {
-                  paymentStatus: "paid",
-                  paystackReference: finalRef,
-                  paidAmount: estimatedTotal,
-                  paidAt: new Date().toISOString()
-                });
-              }
-              sendOrderEmail({ ...bookingPayload, paymentStatus: "paid", paystackReference: finalRef }, docId || undefined);
-              setSent(true);
-              setLoading(false);
+            callback: function(response: { reference: string }) {
+              handleSuccess(response.reference || generatedRef);
             },
             onClose: function() {
-              setPaidRef(generatedRef);
-              setSent(true); // Order is saved in database and emailed to admin even if payment modal closed!
               setLoading(false);
+              if (!paymentSuccess) {
+                setPaidRef(generatedRef);
+              }
             }
           });
           if (handler && typeof handler.openIframe === "function") {
             handler.openIframe();
+            return;
+          }
+        } else if (typeof paystackPop === "function") {
+          const popup = new paystackPop();
+          if (typeof popup.newTransaction === "function") {
+            popup.newTransaction({
+              key: paystackPublicKey,
+              email: paystackEmail,
+              amount: Math.round(estimatedTotal * 100),
+              ref: generatedRef,
+              currency: "NGN",
+              onSuccess: (transaction: any) => {
+                handleSuccess(transaction.reference || generatedRef);
+              },
+              onCancel: () => {
+                setLoading(false);
+                setPaidRef(generatedRef);
+              }
+            });
             return;
           }
         }
@@ -896,6 +921,29 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
               >
                 {loading ? "⏳ Opening Paystack Gateway..." : `Pay Online via Paystack — ₦${estimatedTotal.toLocaleString()}`}
               </button>
+
+              {paidRef && !sent && (
+                <div style={{ marginTop: 20, background: "rgba(57, 255, 20, 0.08)", border: "2px solid #39FF14", borderRadius: 14, padding: 18, textAlign: "center" }}>
+                  <div style={{ color: "#39FF14", fontWeight: 800, fontSize: 16, marginBottom: 6 }}>
+                    📦 Order Logged! (Ref: {paidRef})
+                  </div>
+                  <p style={{ color: "#ccc", fontSize: 13, marginBottom: 14 }}>
+                    Did you complete your payment on Paystack or via Bank Transfer? Click below to view your Thank You receipt &amp; chat with us on WhatsApp!
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSent(true);
+                      if (createdBookingId) {
+                        dbService.updateBookingDetails(createdBookingId, { paymentStatus: "paid" });
+                      }
+                    }}
+                    style={{ background: "#39FF14", color: "#000", fontWeight: 900, padding: "14px 28px", borderRadius: 10, border: "none", cursor: "pointer", fontSize: 15, width: "100%" }}
+                  >
+                    🎉 Confirm Payment &amp; View Thank You Screen
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
