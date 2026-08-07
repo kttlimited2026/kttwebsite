@@ -522,34 +522,55 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
     </div></div>
     <div className="sec" style={{maxWidth:740}}>
       {sent ? (
-        <div className="success" style={{ background: "#111", border: "1px solid #39FF14", borderRadius: 16, padding: "36px 24px", textAlign: "center" }}>
-          <div style={{fontSize:54,marginBottom:12}}>🎉</div>
-          <h3 style={{ color: "#fff", fontSize: 24, marginBottom: 8 }}>Payment Successful &amp; Booking Confirmed!</h3>
-          <p style={{ color: "#aaa", fontSize: 14, marginBottom: 16 }}>
-            Thank you, <strong style={{color:"#39FF14"}}>{form.name}</strong>. Your payment for <strong>{form.service}</strong> has been processed via Paystack.
+        <div className="success" style={{ background: "#111", border: "2px solid #39FF14", borderRadius: 20, padding: "40px 24px", textAlign: "center", boxShadow: "0 10px 40px rgba(57, 255, 20, 0.15)" }}>
+          <div style={{fontSize: 60, marginBottom: 12}}>🎉</div>
+          <h2 style={{ color: "#39FF14", fontSize: 28, fontWeight: 900, marginBottom: 8 }}>
+            Thank You Very Much For Your Order!
+          </h2>
+          <p style={{ color: "#fff", fontSize: 16, fontWeight: 600, marginBottom: 20 }}>
+            Dear <span style={{ color: "#39FF14" }}>{form.name}</span>, your payment for <strong>{form.service}</strong> has been received &amp; confirmed.
           </p>
 
-          <div style={{ background: "rgba(57, 255, 20, 0.12)", border: "1px solid rgba(57, 255, 20, 0.4)", borderRadius: 12, padding: "14px 18px", marginBottom: 20, textAlign: "center" }}>
+          <div style={{ background: "rgba(57, 255, 20, 0.12)", border: "1px solid rgba(57, 255, 20, 0.4)", borderRadius: 14, padding: "16px 20px", marginBottom: 24, textAlign: "center" }}>
             <div style={{ color: "#39FF14", fontSize: 13, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>
               💳 Paystack Online Payment Confirmed
             </div>
-            <div style={{ color: "#fff", fontSize: 15, fontWeight: 700, fontFamily: "monospace" }}>
-              Reference: {paidRef || "KTT-PAYSTACK"}
+            <div style={{ color: "#fff", fontSize: 16, fontWeight: 700, fontFamily: "monospace" }}>
+              Order Reference: {paidRef || "KTT-PAYSTACK"}
             </div>
-            <div style={{ color: "#ccc", fontSize: 13, marginTop: 4 }}>
-              Total Amount Paid: <strong style={{ color: "#39FF14" }}>₦{estimatedTotal.toLocaleString()}</strong>
+            <div style={{ color: "#ccc", fontSize: 14, marginTop: 4 }}>
+              Total Amount Paid: <strong style={{ color: "#39FF14", fontSize: 16 }}>₦{estimatedTotal.toLocaleString()}</strong>
             </div>
           </div>
 
           {isExpress && (
-            <div style={{ background: "rgba(255, 140, 0, 0.15)", border: "1px solid rgba(255, 140, 0, 0.4)", borderRadius: 12, padding: "12px 16px", marginBottom: 20, color: "#FF8C00", fontSize: 13, fontWeight: 700 }}>
+            <div style={{ background: "rgba(255, 140, 0, 0.15)", border: "1px solid rgba(255, 140, 0, 0.4)", borderRadius: 12, padding: "12px 16px", marginBottom: 24, color: "#FF8C00", fontSize: 14, fontWeight: 700 }}>
               ⚡ Marked as EXPRESS EMERGENCY Order! Priority dispatch assigned.
             </div>
           )}
 
-          {/* Email Delivery Status Banner */}
-          <div style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 12, padding: "16px 20px", marginBottom: 24, textAlign: "left" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+          {/* Direct WhatsApp Chat Section */}
+          <div style={{ background: "#162416", border: "2px solid #25D366", borderRadius: 16, padding: "24px 20px", marginBottom: 24, textAlign: "center" }}>
+            <div style={{ fontSize: 24, marginBottom: 6 }}>💬</div>
+            <h3 style={{ color: "#fff", fontSize: 18, fontWeight: 800, marginBottom: 6 }}>
+              Chat with Us on WhatsApp
+            </h3>
+            <p style={{ color: "#bbb", fontSize: 13, marginBottom: 16, maxWidth: 500, margin: "0 auto 16px" }}>
+              Click the button below to send your order reference directly to our customer care team on WhatsApp for live tracking, instant updates, or special instructions.
+            </p>
+            <a 
+              href={`https://wa.me/${settings?.whatsapp || "2348160880608"}?text=${whatsappMsg}`} 
+              target="_blank" 
+              rel="noreferrer"
+              style={{ background: "#25D366", color: "#000", padding: "16px 32px", borderRadius: 12, fontWeight: 900, textDecoration: "none", fontSize: 16, display: "inline-flex", alignItems: "center", gap: 10, boxShadow: "0 6px 20px rgba(37, 211, 102, 0.3)" }}
+            >
+              <span style={{ fontSize: 20 }}>💬</span> Chat on WhatsApp Now
+            </a>
+          </div>
+
+          {/* Email Delivery Status */}
+          <div style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 12, padding: "14px 18px", marginBottom: 24, textAlign: "left" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
               <span style={{ fontSize: 18 }}>
                 {emailStatus === "sent" ? "📩" : "📧"}
               </span>
@@ -563,15 +584,6 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
           </div>
 
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginTop: 20 }}>
-            <a 
-              href={`https://wa.me/${settings?.whatsapp || "2348160880608"}?text=${whatsappMsg}`} 
-              target="_blank" 
-              rel="noreferrer"
-              style={{ background: "#25D366", color: "#000", padding: "12px 24px", borderRadius: 8, fontWeight: 800, textDecoration: "none", fontSize: 14, display: "inline-flex", alignItems: "center", gap: 8 }}
-            >
-              💬 Confirm Dispatch on WhatsApp
-            </a>
-
             <a 
               href={`mailto:${targetEmail}?subject=${emailSubject}&body=${emailBody}`}
               target="_blank"
