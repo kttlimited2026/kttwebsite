@@ -1263,6 +1263,17 @@ export default function AdminDash({
             );
           })()}
 
+          {/* Email & Realtime Orders Sync Info Banner */}
+          <div style={{ background: "rgba(57, 255, 20, 0.08)", border: "1px solid rgba(57, 255, 20, 0.3)", borderRadius: 12, padding: 16, marginBottom: 20 }}>
+            <div style={{ color: "#39FF14", fontWeight: 800, fontSize: 14, marginBottom: 6, display: "flex", alignItems: "center", gap: 8 }}>
+              📡 Real-Time Order System &amp; Email Dispatch Center
+            </div>
+            <div style={{ color: "#ccc", fontSize: 13, lineHeight: 1.5 }}>
+              • <strong>Live Admin Table:</strong> All customer orders placed on the website are automatically saved to your database and appear in the table below instantly without refreshing.<br />
+              • <strong>Email Notifications ({settings.email || "Chatkttlimited@gmail.com"}):</strong> Order receipts are dispatched via email. If you have not yet activated your email on FormSubmit.co, check your inbox for an activation email from FormSubmit and click <em>"Activate Form"</em> once. After activating, all orders will land straight in your inbox!
+            </div>
+          </div>
+
           <div style={{ background: "#1A1A1A", borderRadius: 13, border: "1px solid #2A2A2A", overflow: "auto" }}>
             <table className="bk-table">
               <thead>

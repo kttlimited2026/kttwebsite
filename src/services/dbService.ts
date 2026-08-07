@@ -152,16 +152,18 @@ export const dbService = {
     }
   },
 
-  async createBooking(booking: Omit<Booking, 'id' | 'createdAt'>) {
+  async createBooking(booking: Omit<Booking, 'id' | 'createdAt'>): Promise<string | null> {
     const path = 'bookings';
     try {
-      await addDoc(collection(db, path), {
+      const docRef = await addDoc(collection(db, path), {
         ...booking,
-        status: 'new',
+        status: booking.status || 'new',
         createdAt: serverTimestamp()
       });
+      return docRef.id;
     } catch (e) {
       handleFirestoreError(e, OperationType.CREATE, path);
+      return null;
     }
   },
 
@@ -169,6 +171,15 @@ export const dbService = {
     const path = `bookings/${id}`;
     try {
       await updateDoc(doc(db, 'bookings', id), { status });
+    } catch (e) {
+      handleFirestoreError(e, OperationType.UPDATE, path);
+    }
+  },
+
+  async updateBookingDetails(id: string, details: Partial<Booking>) {
+    const path = `bookings/${id}`;
+    try {
+      await updateDoc(doc(db, 'bookings', id), details);
     } catch (e) {
       handleFirestoreError(e, OperationType.UPDATE, path);
     }

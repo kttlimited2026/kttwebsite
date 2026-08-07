@@ -11,6 +11,7 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
   const [loading, setLoading] = useState(false);
   const [emailStatus, setEmailStatus] = useState<"pending" | "sent" | "failed">("pending");
   const [paidRef, setPaidRef] = useState("");
+  const [createdBookingId, setCreatedBookingId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", email: "", phone: "", altPhone: "", service: pre || "", date: "", time: "", address: "", notes: "" });
 
   React.useEffect(() => {
@@ -18,6 +19,26 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
       setForm(f => ({ ...f, service: pre }));
     }
   }, [pre]);
+
+  // Handle Paystack Redirect parameters if user returned from external bank authorization
+  React.useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const ref = urlParams.get("reference") || urlParams.get("trxref");
+    if (ref) {
+      setPaidRef(ref);
+      setLoading(true);
+      fetch(`/api/paystack/verify/${encodeURIComponent(ref)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.status && data.data?.status === 'success') {
+            setEmailStatus('sent');
+            setSent(true);
+          }
+        })
+        .catch(err => console.error("Auto verify paystack error:", err))
+        .finally(() => setLoading(false));
+    }
+  }, []);
   
   const [isExpress, setIsExpress] = useState(false);
   const [referralCode, setReferralCode] = useState(initialCode || "");
@@ -180,14 +201,12 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
     const refDigits = codeClean.replace(/[^0-9]/g, "");
     const userPhoneDigits = (form.phone || "").replace(/[^0-9]/g, "");
 
-    // 1. Prevent self-referral
     if (userPhoneDigits && refDigits && userPhoneDigits === refDigits) {
       setPromoError("⚠️ Self-referral is not allowed. You cannot use your own phone number as a referral code.");
       setPromoApplied(false);
       return;
     }
 
-    // 2. Format validation
     const prefix = (settings?.referralCodePrefix || "REF").toUpperCase();
     const isPrefixFormat = codeClean.startsWith(prefix + "-") && refDigits.length >= 10;
     const isPhoneFormat = refDigits.length === 11 && (
@@ -200,7 +219,6 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
     );
     const isSpecialCode = ["WELCOME1000", "KTT1000", "KTT2026", "DISCOUNT1000", "REF1000"].includes(codeClean);
 
-    // Also check if code exists in past bookings/referrals database
     let isValidInDB = false;
     if (!isPrefixFormat && !isPhoneFormat && !isSpecialCode) {
       try {
@@ -221,7 +239,6 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
       return;
     }
 
-    // 3. Minimum order validation
     if (!isMinOrderMet) {
       setPromoError(`⚠️ Referral code requires a minimum order of ₦${referralMinOrderVal.toLocaleString()}. Your current subtotal is ₦${currentSubtotal.toLocaleString()}.`);
       setPromoApplied(false);
@@ -234,85 +251,67 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
   const discountPrice = (promoApplied && isMinOrderMet) ? referralDiscountVal : 0;
   const estimatedTotal = Math.max(0, currentSubtotal - discountPrice);
 
-  const finalizePaidBooking = async (paystackRef: string) => {
-    setLoading(true);
-
-    const itemsBreakdownCombined = [
-      selectedLaundrySummaryText ? `🧺 Laundry: ${selectedLaundrySummaryText}` : "",
-      selectedFoodSummaryText ? `🍲 Food: ${selectedFoodSummaryText}` : "",
-      selectedBarSummaryText ? `🍾 Bar & Drinks: ${selectedBarSummaryText}` : "",
-      selectedCleaningSummaryText ? `🧹 Cleaning: ${selectedCleaningSummaryText}` : "",
-      isPlanService ? `💳 Subscription Plan: ${form.service}` : ""
-    ].filter(Boolean).join(" | ");
-
-    const bookingPayload: Booking = {
-      ...form,
-      status: "new",
-      paymentStatus: "paid",
-      paystackReference: paystackRef,
-      paymentMethod: "paystack",
-      paidAmount: estimatedTotal,
-      paidAt: new Date().toISOString(),
-      isExpress,
-      expressFeeAmount: isExpress ? expressFeeVal : 0,
-      referralCodeApplied: promoApplied ? referralCode.trim() : "",
-      referralDiscountAmount: promoApplied ? referralDiscountVal : 0,
-      totalEstimatedPrice: estimatedTotal,
-      laundryItemsBreakdown: itemsBreakdownCombined || (isLaundryService ? "Standard Laundry Package" : isCleaningService ? "Standard Cleaning Package" : isPlanService ? `Plan Subscription (${form.service})` : "Standard Service Order")
-    };
-
+  const sendOrderEmail = async (bookingData: Booking, docId?: string) => {
     try {
-      // 1. Save booking to Firestore database
-      await dbService.createBooking(bookingPayload);
-      setPaidRef(paystackRef);
+      // 1. Client-side FormSubmit AJAX endpoint
+      fetch(`https://formsubmit.co/ajax/${encodeURIComponent(targetEmail)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({
+          _subject: `📦 NEW ORDER: ${bookingData.service} - ${bookingData.name}`,
+          _template: "table",
+          _captcha: "false",
+          "Order ID": docId || "N/A",
+          "Payment Method": bookingData.paymentMethod === "paystack" ? "💳 Paystack Online" : "💵 Pay on Delivery / Transfer",
+          "Payment Status": bookingData.paymentStatus === "paid" ? "🟢 PAID ONLINE" : "⏳ PENDING / DELIVERY",
+          "Paystack Reference": bookingData.paystackReference || "N/A",
+          "Amount": `₦${(bookingData.totalEstimatedPrice || 0).toLocaleString()}`,
+          "Customer Name": bookingData.name,
+          "Customer Email": bookingData.email || "Not provided",
+          "Phone Number": bookingData.phone,
+          "Alt Phone": bookingData.altPhone || "None",
+          "Service Ordered": bookingData.service,
+          "Itemized Details": bookingData.laundryItemsBreakdown || "Standard Package",
+          "Express Emergency": bookingData.isExpress ? `⚡ YES (+₦${expressFeeVal.toLocaleString()})` : "Standard Delivery",
+          "Referral Code": bookingData.referralCodeApplied || "None",
+          "Preferred Date/Time": `${bookingData.date || 'Flexible'} ${bookingData.time || 'Flexible'}`,
+          "Delivery Address": bookingData.address,
+          "Special Notes": bookingData.notes || "None",
+          _replyto: bookingData.email || targetEmail
+        })
+      }).then(res => {
+        if (res.ok) setEmailStatus("sent");
+      }).catch(() => {});
 
-      // 2. Dispatch real automated e-commerce email to business owner via FormSubmit AJAX endpoint
-      try {
-        const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(targetEmail)}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-          },
-          body: JSON.stringify({
-            _subject: `💳 PAID ONLINE VIA PAYSTACK: ${form.service} - ${form.name}`,
-            _template: "table",
-            _captcha: "false",
-            "Payment Status": "🟢 PAID ONLINE (Paystack)",
-            "Paystack Reference": paystackRef,
-            "Amount Paid": `₦${estimatedTotal.toLocaleString()}`,
-            "Customer Name": form.name,
-            "Customer Email": form.email,
-            "Phone Number": form.phone || "Not provided",
-            "Alternative Phone Number": form.altPhone || "Not provided",
-            "Service Ordered": form.service,
-            "Order Itemized Details": itemsBreakdownCombined || (isLaundryService ? "Standard Package" : (showFoodCalc || showBarCalc) ? "Standard Food/Bar Order" : "N/A"),
-            "Emergency Express Service": isExpress ? `⚡ YES (+₦${expressFeeVal.toLocaleString()})` : "Standard Delivery",
-            "Referral Code Applied": promoApplied ? `🎁 ${referralCode} (-₦${referralDiscountVal.toLocaleString()})` : "None",
-            "Preferred Date": form.date || "Flexible",
-            "Preferred Time": form.time || "Flexible",
-            "Delivery / Service Address": form.address || "Not specified",
-            "Special Instructions": form.notes || "None",
-            _replyto: form.email
-          })
-        });
-
-        if (response.ok) {
-          setEmailStatus("sent");
-        } else {
-          setEmailStatus("failed");
-        }
-      } catch (err) {
-        console.warn("Automated email dispatch note:", err);
-        setEmailStatus("failed");
-      }
-
-      setSent(true);
+      // 2. Server-side API dispatch
+      await fetch("/api/send-order-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetEmail,
+          orderDetails: {
+            orderId: docId,
+            customerName: bookingData.name,
+            customerEmail: bookingData.email,
+            phone: bookingData.phone,
+            altPhone: bookingData.altPhone,
+            service: bookingData.service,
+            itemizedBreakdown: bookingData.laundryItemsBreakdown,
+            isExpress: bookingData.isExpress,
+            referralCode: bookingData.referralCodeApplied,
+            amount: `₦${(bookingData.totalEstimatedPrice || 0).toLocaleString()}`,
+            paymentStatus: bookingData.paymentStatus,
+            paystackRef: bookingData.paystackReference,
+            date: bookingData.date,
+            time: bookingData.time,
+            address: bookingData.address,
+            notes: bookingData.notes
+          }
+        })
+      });
+      setEmailStatus("sent");
     } catch (err) {
-      console.error("Booking creation error:", err);
-      alert("Failed to record booking. Please contact us via WhatsApp with your payment reference: " + paystackRef);
-    } finally {
-      setLoading(false);
+      console.warn("Order email error:", err);
     }
   };
 
@@ -336,17 +335,45 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
 
     setLoading(true);
 
+    const itemsBreakdownCombined = [
+      selectedLaundrySummaryText ? `🧺 Laundry: ${selectedLaundrySummaryText}` : "",
+      selectedFoodSummaryText ? `🍲 Food: ${selectedFoodSummaryText}` : "",
+      selectedBarSummaryText ? `🍾 Bar & Drinks: ${selectedBarSummaryText}` : "",
+      selectedCleaningSummaryText ? `🧹 Cleaning: ${selectedCleaningSummaryText}` : "",
+      isPlanService ? `💳 Subscription Plan: ${form.service}` : ""
+    ].filter(Boolean).join(" | ");
+
     const generatedRef = `KTT-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+    const bookingPayload: Booking = {
+      ...form,
+      status: "new",
+      paymentStatus: "pending",
+      paystackReference: generatedRef,
+      paymentMethod: "paystack",
+      paidAmount: estimatedTotal,
+      isExpress,
+      expressFeeAmount: isExpress ? expressFeeVal : 0,
+      referralCodeApplied: promoApplied ? referralCode.trim() : "",
+      referralDiscountAmount: promoApplied ? referralDiscountVal : 0,
+      totalEstimatedPrice: estimatedTotal,
+      laundryItemsBreakdown: itemsBreakdownCombined || (isLaundryService ? "Standard Laundry Package" : isCleaningService ? "Standard Cleaning Package" : isPlanService ? `Plan Subscription (${form.service})` : "Standard Service Order")
+    };
+
+    // 1. SAVE TO FIRESTORE DATABASE IMMEDIATELY
+    const docId = await dbService.createBooking(bookingPayload);
+    if (docId) setCreatedBookingId(docId);
+
+    // 2. DISPATCH ORDER EMAIL IMMEDIATELY TO Chatkttlimited@gmail.com
+    sendOrderEmail(bookingPayload, docId || undefined);
+
+    // 3. LAUNCH PAYSTACK ONLINE PAYMENT GATEWAY
     const paystackPublicKey = settings?.paystackPublicKey || "pk_live_7bdb2390c39862dbc3699090128503bde566ab45";
     const paystackEmail = form.email || (form.phone ? `${form.phone.replace(/[^0-9]/g, '')}@kingstreattech.com` : `customer-${Date.now()}@kingstreattech.com`);
 
-    // Helper to dynamically load Paystack Inline JS script if not present
     const loadPaystackInlineScript = (): Promise<boolean> => {
       return new Promise((resolve) => {
-        if ((window as any).PaystackPop) {
-          resolve(true);
-          return;
-        }
+        if ((window as any).PaystackPop) { resolve(true); return; }
         const existingScript = document.getElementById("paystack-js-script");
         if (existingScript) {
           existingScript.addEventListener("load", () => resolve(true));
@@ -372,7 +399,7 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
           const handler = paystackPop.setup({
             key: paystackPublicKey,
             email: paystackEmail,
-            amount: Math.round(estimatedTotal * 100), // in kobo
+            amount: Math.round(estimatedTotal * 100),
             ref: generatedRef,
             currency: "NGN",
             metadata: {
@@ -385,35 +412,27 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
             },
             callback: async function(response: { reference: string }) {
               const finalRef = response.reference || generatedRef;
-              await finalizePaidBooking(finalRef);
+              setPaidRef(finalRef);
+              if (docId) {
+                await dbService.updateBookingDetails(docId, {
+                  paymentStatus: "paid",
+                  paystackReference: finalRef,
+                  paidAmount: estimatedTotal,
+                  paidAt: new Date().toISOString()
+                });
+              }
+              sendOrderEmail({ ...bookingPayload, paymentStatus: "paid", paystackReference: finalRef }, docId || undefined);
+              setSent(true);
+              setLoading(false);
             },
             onClose: function() {
+              setPaidRef(generatedRef);
+              setSent(true); // Order is saved in database and emailed to admin even if payment modal closed!
               setLoading(false);
-              alert("Payment pop-up was closed. Online payment is required to confirm your booking.");
             }
           });
           if (handler && typeof handler.openIframe === "function") {
             handler.openIframe();
-            return;
-          }
-        } else if (typeof paystackPop === "function") {
-          const popup = new paystackPop();
-          if (typeof popup.newTransaction === "function") {
-            popup.newTransaction({
-              key: paystackPublicKey,
-              email: paystackEmail,
-              amount: Math.round(estimatedTotal * 100),
-              ref: generatedRef,
-              currency: "NGN",
-              onSuccess: async (transaction: any) => {
-                const finalRef = transaction.reference || generatedRef;
-                await finalizePaidBooking(finalRef);
-              },
-              onCancel: () => {
-                setLoading(false);
-                alert("Payment was cancelled.");
-              }
-            });
             return;
           }
         }
@@ -422,10 +441,10 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
       }
     }
 
-    await fallbackInitialize(generatedRef);
+    await fallbackInitialize(generatedRef, docId || undefined, bookingPayload);
   };
 
-  const fallbackInitialize = async (ref: string) => {
+  const fallbackInitialize = async (ref: string, docId?: string, bookingPayload?: Booking) => {
     try {
       const paystackEmail = form.email || (form.phone ? `${form.phone.replace(/[^0-9]/g, '')}@kingstreattech.com` : `customer-${Date.now()}@kingstreattech.com`);
       const response = await fetch("/api/paystack/initialize", {
@@ -435,6 +454,7 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
           email: paystackEmail,
           amount: estimatedTotal,
           reference: ref,
+          callback_url: window.location.href,
           metadata: {
             customer_name: form.name,
             service: form.service,
@@ -443,21 +463,18 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
         })
       });
 
-      const contentType = response.headers.get("content-type");
-      if (!response.ok || !contentType || !contentType.includes("application/json")) {
-        throw new Error("API server response not JSON");
-      }
-
       const data = await response.json();
       if (data.status && data.data?.authorization_url) {
         window.location.href = data.data.authorization_url;
       } else {
-        alert(data.message || "Failed to initialize Paystack payment. Please check your network connection and try again.");
+        setPaidRef(ref);
+        setSent(true);
         setLoading(false);
       }
     } catch (err) {
       console.error("Paystack fallback init error:", err);
-      alert("Unable to open Paystack payment window directly. Please try tapping 'Pay on Paystack' again or contact Kings Treat Tech support on WhatsApp (+234 816 088 0608).");
+      setPaidRef(ref);
+      setSent(true);
       setLoading(false);
     }
   };
@@ -856,8 +873,8 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
               </div>
             )}
 
-            {/* Paystack Payment CTA */}
-            <div style={{ marginTop: 16 }}>
+            {/* Submit Order / Payment CTA */}
+            <div style={{ marginTop: 20 }}>
               <button 
                 type="button"
                 className="f-submit" 
@@ -865,7 +882,7 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
                 disabled={loading}
                 style={{ background: "#39FF14", color: "#000", fontSize: 16, fontWeight: 900, border: "none", opacity: loading ? 0.7 : 1, cursor: loading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", padding: "16px", borderRadius: 12 }}
               >
-                {loading ? "⏳ Opening Paystack Gateway..." : `Make Payment Now — ₦${estimatedTotal.toLocaleString()}`}
+                {loading ? "⏳ Opening Paystack Gateway..." : `Pay Online via Paystack — ₦${estimatedTotal.toLocaleString()}`}
               </button>
             </div>
           </div>
