@@ -460,21 +460,21 @@ export default function AdminDash({
         </div>
       )}
 
-      {/* Role Banner Info & Real-Time Sync Bar */}
-      <div style={{ background: "#0e0e0e", borderBottom: "1px solid #222", padding: "14px 5%", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 14 }}>
+      {/* Combined Role Banner & Real-Time Alert Controls Bar */}
+      <div style={{ background: "#0e0e0e", borderBottom: "1px solid #1a1a1a", padding: "8px 4%", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
         {/* User Identity & Live Status */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <div style={{ fontSize: 13, color: "#ccc" }}>
-            Logged in as: <strong style={{ color: "#fff" }}>{currentUserEmail || "Admin"}</strong> {isSuperAdmin ? <span style={{ color: "#39FF14", marginLeft: 6, fontWeight: 700 }}>(👑 Super Admin)</span> : <span style={{ color: "#FF5E00", marginLeft: 6, fontWeight: 700 }}>(👔 Sub-Admin)</span>}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <div style={{ fontSize: 12, color: "#aaa" }}>
+            Logged in as: <strong style={{ color: "#fff" }}>{currentUserEmail || "Admin"}</strong> {isSuperAdmin ? <span style={{ color: "#39FF14", marginLeft: 4, fontWeight: 700 }}>(👑 Super Admin)</span> : <span style={{ color: "#FF8C00", marginLeft: 4, fontWeight: 700 }}>(👔 Sub-Admin)</span>}
           </div>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(57, 255, 20, 0.1)", border: "1px solid rgba(57, 255, 20, 0.4)", padding: "5px 12px", borderRadius: 20, color: "#39FF14", fontWeight: 800, fontSize: 11 }}>
-            <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#39FF14", boxShadow: "0 0 10px #39FF14", animation: "pulse 1.5s infinite" }}></span>
-            Real-Time Firestore Sync Active
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(57, 255, 20, 0.08)", border: "1px solid rgba(57, 255, 20, 0.25)", padding: "2px 8px", borderRadius: 12, color: "#39FF14", fontWeight: 700, fontSize: 10 }}>
+            <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "#39FF14", boxShadow: "0 0 6px #39FF14" }}></span>
+            Real-Time Sync
           </div>
         </div>
 
-        {/* Real-Time Alert Controls Bar */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        {/* Compact Alert Toolbar Controls */}
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
           {/* 1. Audio Chime Toggle */}
           <button
             type="button"
@@ -484,41 +484,42 @@ export default function AdminDash({
               if (next) playAlertChime();
             }}
             style={{
-              background: soundEnabled ? "linear-gradient(135deg, rgba(57,255,20,0.2) 0%, rgba(57,255,20,0.08) 100%)" : "#1a1a1a",
-              border: soundEnabled ? "1px solid #39FF14" : "1px solid #333",
+              background: soundEnabled ? "rgba(57, 255, 20, 0.12)" : "#181818",
+              border: soundEnabled ? "1px solid rgba(57, 255, 20, 0.4)" : "1px solid #2a2a2a",
               color: soundEnabled ? "#39FF14" : "#888",
-              borderRadius: 10,
-              padding: "8px 14px",
-              fontSize: 12,
-              fontWeight: 800,
+              borderRadius: 6,
+              padding: "4px 10px",
+              fontSize: 11,
+              fontWeight: 700,
               cursor: "pointer",
               display: "inline-flex",
               alignItems: "center",
-              gap: 8,
-              boxShadow: soundEnabled ? "0 0 12px rgba(57,255,20,0.2)" : "none",
-              transition: "all 0.2s"
+              gap: 5,
+              whiteSpace: "nowrap",
+              transition: "all 0.15s ease"
             }}
             title="Click to toggle sound alerts"
           >
-            {soundEnabled ? "🔊 Sound Alerts On" : "🔇 Sound Muted"}
+            {soundEnabled ? "🔊 Sound On" : "🔇 Sound Muted"}
           </button>
 
           {/* 2. Desktop Notification Permission */}
           {"Notification" in window && (
             Notification.permission === "granted" ? (
               <span style={{
-                background: "rgba(57, 255, 20, 0.12)",
-                border: "1px solid #39FF14",
+                background: "rgba(57, 255, 20, 0.08)",
+                border: "1px solid rgba(57, 255, 20, 0.25)",
                 color: "#39FF14",
-                borderRadius: 10,
-                padding: "8px 14px",
-                fontSize: 12,
-                fontWeight: 800,
+                borderRadius: 6,
+                padding: "4px 10px",
+                fontSize: 11,
+                fontWeight: 700,
                 display: "inline-flex",
                 alignItems: "center",
-                gap: 6
+                gap: 5,
+                whiteSpace: "nowrap"
               }}>
-                🔔 Desktop Alerts: Enabled
+                🔔 Desktop Alerts On
               </span>
             ) : (
               <button
@@ -533,18 +534,19 @@ export default function AdminDash({
                   });
                 }}
                 style={{
-                  background: "linear-gradient(135deg, #FF5E00 0%, #E05200 100%)",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 10,
-                  padding: "8px 14px",
-                  fontSize: 12,
-                  fontWeight: 800,
+                  background: "rgba(255, 140, 0, 0.15)",
+                  border: "1px solid rgba(255, 140, 0, 0.5)",
+                  color: "#FF8C00",
+                  borderRadius: 6,
+                  padding: "4px 10px",
+                  fontSize: 11,
+                  fontWeight: 700,
                   cursor: "pointer",
-                  boxShadow: "0 4px 15px rgba(255,94,0,0.35)",
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: 6
+                  gap: 5,
+                  whiteSpace: "nowrap",
+                  transition: "all 0.15s ease"
                 }}
               >
                 🔔 Enable Desktop Alerts
@@ -557,18 +559,19 @@ export default function AdminDash({
             type="button"
             onClick={handleTestOrderAlert}
             style={{
-              background: "rgba(255,94,0,0.15)",
-              border: "1px solid #FF5E00",
-              color: "#FF5E00",
-              borderRadius: 10,
-              padding: "8px 14px",
-              fontSize: 12,
-              fontWeight: 800,
+              background: "rgba(255, 255, 255, 0.05)",
+              border: "1px solid #2a2a2a",
+              color: "#ccc",
+              borderRadius: 6,
+              padding: "4px 10px",
+              fontSize: 11,
+              fontWeight: 700,
               cursor: "pointer",
               display: "inline-flex",
               alignItems: "center",
-              gap: 6,
-              transition: "all 0.2s"
+              gap: 5,
+              whiteSpace: "nowrap",
+              transition: "all 0.15s ease"
             }}
             title="Simulate receiving a new order"
           >
@@ -584,26 +587,28 @@ export default function AdminDash({
                 setNotifications(prev => prev.map(n => ({ ...n, read: true })));
               }}
               style={{
-                background: showNotifDrawer ? "#222" : "#1a1a1a",
-                border: showNotifDrawer ? "1px solid #39FF14" : "1px solid #333",
+                background: showNotifDrawer ? "#2a2a2a" : "#181818",
+                border: showNotifDrawer ? "1px solid #39FF14" : "1px solid #2a2a2a",
                 color: "#fff",
-                borderRadius: 10,
-                padding: "8px 14px",
-                fontSize: 12,
-                fontWeight: 800,
+                borderRadius: 6,
+                padding: "4px 10px",
+                fontSize: 11,
+                fontWeight: 700,
                 cursor: "pointer",
                 display: "inline-flex",
                 alignItems: "center",
-                gap: 8
+                gap: 5,
+                whiteSpace: "nowrap",
+                transition: "all 0.15s ease"
               }}
             >
-              🔔 Order Alerts
+              🔔 Alerts
               {notifications.filter(n => !n.read).length > 0 ? (
-                <span style={{ background: "#FF3B30", color: "#fff", borderRadius: "50%", padding: "2px 7px", fontSize: 11, fontWeight: 900 }}>
+                <span style={{ background: "#FF3B30", color: "#fff", borderRadius: 10, padding: "1px 5px", fontSize: 10, fontWeight: 900 }}>
                   {notifications.filter(n => !n.read).length}
                 </span>
               ) : notifications.length > 0 ? (
-                <span style={{ background: "#333", color: "#aaa", borderRadius: "50%", padding: "2px 7px", fontSize: 11, fontWeight: 800 }}>
+                <span style={{ background: "#333", color: "#aaa", borderRadius: 10, padding: "1px 5px", fontSize: 10, fontWeight: 700 }}>
                   {notifications.length}
                 </span>
               ) : null}
