@@ -255,13 +255,14 @@ export default function AdminDash({
     return unsub;
   }, [soundEnabled]);
 
-  // Manual test trigger for admins to verify alerts
-  const handleTestOrderAlert = () => {
+  // Manual test trigger for admins to verify alerts & trigger email activation
+  const handleTestOrderAlert = async () => {
+    const targetEmail = settings.email || "Chatkttlimited@gmail.com";
     const dummyOrder: Booking = {
       id: "test_" + Date.now(),
       name: "Test Customer (Real-Time Demo)",
       phone: "08012345678",
-      email: "test@example.com",
+      email: "customer@example.com",
       service: "Gourmet Catering / Food Order",
       date: "Today",
       time: "Immediate",
@@ -286,6 +287,34 @@ export default function AdminDash({
     setActiveToastNotif(dummyOrder);
     playAlertChime();
     triggerDesktopNotification(dummyOrder);
+
+    // Send test email to target recipient to trigger or test FormSubmit dispatch
+    try {
+      const res = await fetch("/api/send-order-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetEmail,
+          isTest: true,
+          orderDetails: {
+            orderId: dummyOrder.id,
+            customerName: dummyOrder.name,
+            customerEmail: dummyOrder.email,
+            phone: dummyOrder.phone,
+            service: dummyOrder.service,
+            amount: `₦${dummyOrder.paidAmount.toLocaleString()}`,
+            paymentStatus: "Paid (Test)",
+            address: dummyOrder.address,
+            notes: dummyOrder.notes
+          }
+        })
+      });
+      const data = await res.json();
+      console.log("Test Order Email API Response:", data);
+      alert(`📧 Test order email sent to ${targetEmail}!\n\nIMPORTANT NOTE:\nIf this is your first time receiving notifications on ${targetEmail}, check your inbox (and Spam folder) for a message from FormSubmit asking to 'Activate FormSubmit' or 'Confirm Email'. Click that link ONCE to authorize FormSubmit to deliver all future order emails directly to your Gmail inbox!`);
+    } catch (err) {
+      console.error("Failed to trigger test email:", err);
+    }
   };
 
   const save = async () => {
@@ -1844,6 +1873,21 @@ export default function AdminDash({
               {(["phone", "managerPhone", "email", "whatsapp", "address"] as const).map((k) => (
                 <div key={k} className="af"><label>{k === "phone" ? "Front Desk Hotline" : k === "managerPhone" ? "Manager Hotline" : k}</label><input value={settings[k] || ""} onChange={e => updSetting(k, e.target.value)} /></div>
               ))}
+              <div style={{ marginTop: 12, padding: 12, background: "rgba(255, 140, 0, 0.08)", border: "1px solid rgba(255, 140, 0, 0.3)", borderRadius: 8 }}>
+                <div style={{ fontSize: 12, color: "#FF8C00", fontWeight: 700, marginBottom: 4 }}>
+                  📧 Order Notification Email Status ({settings.email || "Chatkttlimited@gmail.com"})
+                </div>
+                <p style={{ fontSize: 11, color: "#ccc", margin: "0 0 8px 0", lineHeight: 1.4 }}>
+                  FormSubmit delivers new customer booking forms directly to this email address. If you need a new activation link, click below:
+                </p>
+                <button
+                  type="button"
+                  onClick={handleTestOrderAlert}
+                  style={{ background: "#FF5E00", color: "#fff", border: "none", padding: "6px 12px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
+                >
+                  ✉️ Trigger / Resend Email Activation Link
+                </button>
+              </div>
             </div>
             <div className="settings-card">
               <h3>📱 Social Media Links</h3>
