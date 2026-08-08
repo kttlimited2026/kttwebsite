@@ -95,7 +95,7 @@ const DEFAULT_PLANS: Plan[] = [
 const DEFAULT_SETTINGS: Settings = {
   phone: "07066613373",
   managerPhone: "09047885282",
-  email: "Ktt.inquiries@gmail.com",
+  email: "Chatkttlimited@gmail.com",
   whatsapp: "2348160880608",
   address: "First gate Apo mechanic Estate, opposite Dubison oil, Abuja, Nigeria",
   monThu: "9am – 10pm",

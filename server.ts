@@ -82,14 +82,43 @@ async function startServer() {
   // Send Order Email Notification Endpoint
   app.post("/api/send-order-email", async (req, res) => {
     try {
-      const { targetEmail, orderDetails } = req.body;
+      const { targetEmail, orderDetails, isTest } = req.body;
       const recipient = targetEmail || "Chatkttlimited@gmail.com";
 
-      if (!orderDetails) {
+      if (!orderDetails && !isTest) {
         return res.status(400).json({ status: false, message: "Order details required" });
       }
 
-      console.log(`[ORDER EMAIL DISPATCH] Sending new order notification to ${recipient}:`, orderDetails);
+      console.log(`[ORDER EMAIL DISPATCH] Sending order notification to ${recipient}:`, orderDetails || "Test Email");
+
+      const payload = isTest ? {
+        _subject: "🧪 TEST ORDER ACTIVATION EMAIL - Kings Treat Tech",
+        _template: "table",
+        _captcha: "false",
+        "Notice": "This is a test notification to activate FormSubmit for your email address.",
+        "Recipient Email": recipient,
+        "Timestamp": new Date().toISOString()
+      } : {
+        _subject: `📦 NEW ORDER: ${orderDetails.service || 'Service'} - ${orderDetails.customerName || 'Customer'}`,
+        _template: "table",
+        _captcha: "false",
+        "Order ID": orderDetails.orderId || "N/A",
+        "Payment Status": orderDetails.paymentStatus || "Pending",
+        "Paystack Ref": orderDetails.paystackRef || "N/A",
+        "Amount": orderDetails.amount || "N/A",
+        "Customer Name": orderDetails.customerName,
+        "Customer Email": orderDetails.customerEmail || "Not provided",
+        "Phone Number": orderDetails.phone,
+        "Alt Phone": orderDetails.altPhone || "N/A",
+        "Service Ordered": orderDetails.service,
+        "Itemized Breakdown": orderDetails.itemizedBreakdown || "N/A",
+        "Express Emergency": orderDetails.isExpress ? "YES" : "NO",
+        "Referral Code": orderDetails.referralCode || "None",
+        "Preferred Date/Time": `${orderDetails.date || 'Flexible'} ${orderDetails.time || 'Flexible'}`,
+        "Delivery Address": orderDetails.address,
+        "Special Notes": orderDetails.notes || "None",
+        _replyto: orderDetails.customerEmail || recipient
+      };
 
       const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(recipient)}`, {
         method: "POST",
@@ -97,32 +126,17 @@ async function startServer() {
           "Content-Type": "application/json",
           "Accept": "application/json"
         },
-        body: JSON.stringify({
-          _subject: `📦 NEW ORDER: ${orderDetails.service || 'Service'} - ${orderDetails.customerName || 'Customer'}`,
-          _template: "table",
-          _captcha: "false",
-          "Order ID": orderDetails.orderId || "N/A",
-          "Payment Status": orderDetails.paymentStatus || "Pending",
-          "Paystack Ref": orderDetails.paystackRef || "N/A",
-          "Amount": orderDetails.amount || "N/A",
-          "Customer Name": orderDetails.customerName,
-          "Customer Email": orderDetails.customerEmail,
-          "Phone Number": orderDetails.phone,
-          "Alt Phone": orderDetails.altPhone || "N/A",
-          "Service Ordered": orderDetails.service,
-          "Itemized Breakdown": orderDetails.itemizedBreakdown || "N/A",
-          "Express Emergency": orderDetails.isExpress ? "YES" : "NO",
-          "Referral Code": orderDetails.referralCode || "None",
-          "Preferred Date/Time": `${orderDetails.date || 'Flexible'} ${orderDetails.time || 'Flexible'}`,
-          "Delivery Address": orderDetails.address,
-          "Special Notes": orderDetails.notes || "None",
-          _replyto: orderDetails.customerEmail
-        })
+        body: JSON.stringify(payload)
       });
 
-      const data = await response.json().catch(() => ({ success: "false", message: "Invalid JSON response" }));
+      const data = await response.json().catch(() => ({ success: "false", message: "Non-JSON response from FormSubmit" }));
       console.log(`[FORM_SUBMIT RESPONSE for ${recipient}]:`, data);
-      return res.json({ status: response.ok, formsubmit: data });
+
+      return res.json({ 
+        status: response.ok, 
+        formsubmit: data,
+        message: data.message || (response.ok ? "Email dispatched successfully" : "FormSubmit request failed") 
+      });
     } catch (error: any) {
       console.error("Send Order Email Error:", error);
       return res.status(500).json({ status: false, message: error.message || "Failed to send email notification" });

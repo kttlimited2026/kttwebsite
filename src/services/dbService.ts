@@ -194,12 +194,29 @@ export const dbService = {
     }
   },
 
-  // Real-time listener for admins
-  subscribeToBookings(callback: (bookings: Booking[]) => void) {
+  // Real-time listener for admins with snapshot change detection
+  subscribeToBookings(
+    callback: (bookings: Booking[]) => void,
+    onNewOrder?: (newOrder: Booking) => void
+  ) {
     const path = 'bookings';
     const q = query(collection(db, path), orderBy('createdAt', 'desc'));
+    let isInitial = true;
+
     return onSnapshot(q, (snap) => {
-      callback(snap.docs.map(d => ({ id: d.id, ...d.data() } as Booking)));
+      const bookingsList = snap.docs.map(d => ({ id: d.id, ...d.data() } as Booking));
+      callback(bookingsList);
+
+      if (isInitial) {
+        isInitial = false;
+      } else if (onNewOrder) {
+        snap.docChanges().forEach((change) => {
+          if (change.type === 'added') {
+            const newOrder = { id: change.doc.id, ...change.doc.data() } as Booking;
+            onNewOrder(newOrder);
+          }
+        });
+      }
     }, (e) => {
       handleFirestoreError(e, OperationType.LIST, path);
     });

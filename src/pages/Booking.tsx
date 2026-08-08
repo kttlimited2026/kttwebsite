@@ -262,7 +262,7 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
           _template: "table",
           _captcha: "false",
           "Order ID": docId || "N/A",
-          "Payment Method": bookingData.paymentMethod === "paystack" ? "💳 Paystack Online" : "💵 Pay on Delivery / Transfer",
+          "Payment Method": "💳 Paystack Online",
           "Payment Status": bookingData.paymentStatus === "paid" ? "🟢 PAID ONLINE" : "⏳ PENDING / DELIVERY",
           "Paystack Reference": bookingData.paystackReference || "N/A",
           "Amount": `₦${(bookingData.totalEstimatedPrice || 0).toLocaleString()}`,
@@ -279,12 +279,16 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
           "Special Notes": bookingData.notes || "None",
           _replyto: bookingData.email || targetEmail
         })
-      }).then(res => {
-        if (res.ok) setEmailStatus("sent");
-      }).catch(() => {});
+      })
+      .then(res => res.json())
+      .then(data => {
+        console.log("Client FormSubmit response:", data);
+        if (data.success === "true" || data.success === true) setEmailStatus("sent");
+      })
+      .catch((err) => console.warn("Client FormSubmit error:", err));
 
       // 2. Server-side API dispatch
-      await fetch("/api/send-order-email", {
+      const res = await fetch("/api/send-order-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -309,7 +313,11 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
           }
         })
       });
-      setEmailStatus("sent");
+      const data = await res.json();
+      console.log("Server send-order-email response:", data);
+      if (data.status || data.formsubmit?.success === "true") {
+        setEmailStatus("sent");
+      }
     } catch (err) {
       console.warn("Order email error:", err);
     }

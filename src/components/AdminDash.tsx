@@ -102,6 +102,47 @@ export default function AdminDash({
   const [showAdminPass, setShowAdminPass] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
 
+  // Real-Time Order Notification System State
+  const [notifications, setNotifications] = useState<Array<{ id: string; order: Booking; timestamp: string; read: boolean }>>([]);
+  const [showNotifDrawer, setShowNotifDrawer] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [activeToastNotif, setActiveToastNotif] = useState<Booking | null>(null);
+
+  // Play audio alert chime using Web Audio API
+  const playAlertChime = () => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15); // A5
+      
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.start();
+      osc.stop(ctx.currentTime + 0.5);
+    } catch (e) {
+      console.warn("Audio chime failed or blocked:", e);
+    }
+  };
+
+  // Trigger browser native desktop notification
+  const triggerDesktopNotification = (order: Booking) => {
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification("🚨 NEW ORDER RECEIVED!", {
+        body: `${order.name || 'Customer'} ordered ${order.service || 'Service'} — ₦${(order.paidAmount || order.totalEstimatedPrice || 0).toLocaleString()}`,
+        icon: "/favicon.ico"
+      });
+    }
+  };
+
   // Form state for adding sub-admin
   const [newSubEmail, setNewSubEmail] = useState("");
   const [newSubName, setNewSubName] = useState("");
@@ -189,10 +230,63 @@ export default function AdminDash({
     }
   };
 
+  // Real-time Firestore snapshot listener for orders & live alerts
   useEffect(() => {
-    const unsub = dbService.subscribeToBookings(setBookings);
+    const unsub = dbService.subscribeToBookings(
+      (newBookingsList) => {
+        setBookings(newBookingsList);
+      },
+      (newOrder) => {
+        // Triggered when a new order document is added to Firestore in real-time
+        const notifItem = {
+          id: "notif_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6),
+          order: newOrder,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          read: false
+        };
+
+        setNotifications(prev => [notifItem, ...prev]);
+        setActiveToastNotif(newOrder);
+        playAlertChime();
+        triggerDesktopNotification(newOrder);
+      }
+    );
+
     return unsub;
-  }, []);
+  }, [soundEnabled]);
+
+  // Manual test trigger for admins to verify alerts
+  const handleTestOrderAlert = () => {
+    const dummyOrder: Booking = {
+      id: "test_" + Date.now(),
+      name: "Test Customer (Real-Time Demo)",
+      phone: "08012345678",
+      email: "test@example.com",
+      service: "Gourmet Catering / Food Order",
+      date: "Today",
+      time: "Immediate",
+      paidAmount: 12500,
+      totalEstimatedPrice: 12500,
+      paymentMethod: "paystack",
+      paymentStatus: "paid",
+      status: "new",
+      createdAt: "Just now",
+      address: "123 Kings Way, Lagos",
+      notes: "Testing real-time order alert notification system"
+    };
+
+    const notifItem = {
+      id: "notif_test_" + Date.now(),
+      order: dummyOrder,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      read: false
+    };
+
+    setNotifications(prev => [notifItem, ...prev]);
+    setActiveToastNotif(dummyOrder);
+    playAlertChime();
+    triggerDesktopNotification(dummyOrder);
+  };
 
   const save = async () => {
     setSaved(true);
@@ -318,17 +412,255 @@ export default function AdminDash({
   };
 
   return (
-    <div className="admin-wrap">
-      {/* Role Banner Info */}
-      <div style={{ background: "#111", borderBottom: "1px solid #222", padding: "8px 5%", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, color: "#888" }}>
-        <div>
-          Logged in as: <strong style={{ color: "#fff" }}>{currentUserEmail || "Admin"}</strong> {isSuperAdmin ? <span style={{ color: "#39FF14", marginLeft: 6, fontWeight: 700 }}>(👑 Super Admin)</span> : <span style={{ color: "#FF5E00", marginLeft: 6, fontWeight: 700 }}>(👔 Sub-Admin)</span>}
-        </div>
-        {!isSuperAdmin && currentSubAdmin && (
-          <div style={{ color: "#D4D4D8", fontSize: 11 }}>
-            Permissions: <span style={{ color: "#39FF14", fontWeight: 600 }}>{currentSubAdmin.permissions.join(", ")}</span>
+    <div className="admin-wrap" style={{ position: "relative" }}>
+      {/* Floating Real-Time Toast Banner Alert when a new order arrives */}
+      {activeToastNotif && (
+        <div style={{ position: "fixed", top: 20, right: 20, zIndex: 99999, width: 360, background: "#111", border: "2px solid #39FF14", borderRadius: 16, padding: 18, boxShadow: "0 10px 40px rgba(57, 255, 20, 0.35)", animation: "slideIn 0.3s ease" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ color: "#39FF14", fontWeight: 900, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+              🚨 REAL-TIME ALERT: NEW ORDER!
+            </span>
+            <button
+              type="button"
+              onClick={() => setActiveToastNotif(null)}
+              style={{ background: "transparent", border: "none", color: "#aaa", fontSize: 18, fontWeight: 900, cursor: "pointer" }}
+            >
+              ✕
+            </button>
           </div>
-        )}
+
+          <div style={{ color: "#fff", fontSize: 15, fontWeight: 800, marginBottom: 4 }}>
+            {activeToastNotif.name || "Customer"}
+          </div>
+          <div style={{ color: "#ccc", fontSize: 12, lineHeight: 1.5, marginBottom: 10 }}>
+            📱 Phone: <strong>{activeToastNotif.phone || "N/A"}</strong><br />
+            ⚙️ Service: <strong style={{ color: "#FF8C00" }}>{activeToastNotif.service}</strong><br />
+            💵 Amount: <strong style={{ color: "#39FF14" }}>₦{(activeToastNotif.paidAmount || activeToastNotif.totalEstimatedPrice || 0).toLocaleString()}</strong>
+          </div>
+
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              type="button"
+              onClick={() => {
+                setTab("bookings");
+                setActiveToastNotif(null);
+              }}
+              style={{ flex: 1, background: "#39FF14", color: "#000", fontWeight: 900, padding: "8px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12 }}
+            >
+              📋 Open Bookings &amp; Orders
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveToastNotif(null)}
+              style={{ background: "#222", color: "#ccc", fontWeight: 700, padding: "8px 12px", borderRadius: 8, border: "1px solid #444", cursor: "pointer", fontSize: 12 }}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Role Banner Info & Real-Time Sync Bar */}
+      <div style={{ background: "#0e0e0e", borderBottom: "1px solid #222", padding: "14px 5%", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 14 }}>
+        {/* User Identity & Live Status */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ fontSize: 13, color: "#ccc" }}>
+            Logged in as: <strong style={{ color: "#fff" }}>{currentUserEmail || "Admin"}</strong> {isSuperAdmin ? <span style={{ color: "#39FF14", marginLeft: 6, fontWeight: 700 }}>(👑 Super Admin)</span> : <span style={{ color: "#FF5E00", marginLeft: 6, fontWeight: 700 }}>(👔 Sub-Admin)</span>}
+          </div>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(57, 255, 20, 0.1)", border: "1px solid rgba(57, 255, 20, 0.4)", padding: "5px 12px", borderRadius: 20, color: "#39FF14", fontWeight: 800, fontSize: 11 }}>
+            <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#39FF14", boxShadow: "0 0 10px #39FF14", animation: "pulse 1.5s infinite" }}></span>
+            Real-Time Firestore Sync Active
+          </div>
+        </div>
+
+        {/* Real-Time Alert Controls Bar */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          {/* 1. Audio Chime Toggle */}
+          <button
+            type="button"
+            onClick={() => {
+              const next = !soundEnabled;
+              setSoundEnabled(next);
+              if (next) playAlertChime();
+            }}
+            style={{
+              background: soundEnabled ? "linear-gradient(135deg, rgba(57,255,20,0.2) 0%, rgba(57,255,20,0.08) 100%)" : "#1a1a1a",
+              border: soundEnabled ? "1px solid #39FF14" : "1px solid #333",
+              color: soundEnabled ? "#39FF14" : "#888",
+              borderRadius: 10,
+              padding: "8px 14px",
+              fontSize: 12,
+              fontWeight: 800,
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              boxShadow: soundEnabled ? "0 0 12px rgba(57,255,20,0.2)" : "none",
+              transition: "all 0.2s"
+            }}
+            title="Click to toggle sound alerts"
+          >
+            {soundEnabled ? "🔊 Sound Alerts On" : "🔇 Sound Muted"}
+          </button>
+
+          {/* 2. Desktop Notification Permission */}
+          {"Notification" in window && (
+            Notification.permission === "granted" ? (
+              <span style={{
+                background: "rgba(57, 255, 20, 0.12)",
+                border: "1px solid #39FF14",
+                color: "#39FF14",
+                borderRadius: 10,
+                padding: "8px 14px",
+                fontSize: 12,
+                fontWeight: 800,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6
+              }}>
+                🔔 Desktop Alerts: Enabled
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                      alert("✅ Desktop notifications enabled! You will receive popups when customers place new orders.");
+                    } else {
+                      alert("⚠️ Permission was not granted. Please allow notifications in browser settings.");
+                    }
+                  });
+                }}
+                style={{
+                  background: "linear-gradient(135deg, #FF5E00 0%, #E05200 100%)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 10,
+                  padding: "8px 14px",
+                  fontSize: 12,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  boxShadow: "0 4px 15px rgba(255,94,0,0.35)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6
+                }}
+              >
+                🔔 Enable Desktop Alerts
+              </button>
+            )
+          )}
+
+          {/* 3. Test Alert Trigger */}
+          <button
+            type="button"
+            onClick={handleTestOrderAlert}
+            style={{
+              background: "rgba(255,94,0,0.15)",
+              border: "1px solid #FF5E00",
+              color: "#FF5E00",
+              borderRadius: 10,
+              padding: "8px 14px",
+              fontSize: 12,
+              fontWeight: 800,
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              transition: "all 0.2s"
+            }}
+            title="Simulate receiving a new order"
+          >
+            ⚡ Test Alert
+          </button>
+
+          {/* 4. Bell Notification Drawer Toggle */}
+          <div style={{ position: "relative" }}>
+            <button
+              type="button"
+              onClick={() => {
+                setShowNotifDrawer(!showNotifDrawer);
+                setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+              }}
+              style={{
+                background: showNotifDrawer ? "#222" : "#1a1a1a",
+                border: showNotifDrawer ? "1px solid #39FF14" : "1px solid #333",
+                color: "#fff",
+                borderRadius: 10,
+                padding: "8px 14px",
+                fontSize: 12,
+                fontWeight: 800,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8
+              }}
+            >
+              🔔 Order Alerts
+              {notifications.filter(n => !n.read).length > 0 ? (
+                <span style={{ background: "#FF3B30", color: "#fff", borderRadius: "50%", padding: "2px 7px", fontSize: 11, fontWeight: 900 }}>
+                  {notifications.filter(n => !n.read).length}
+                </span>
+              ) : notifications.length > 0 ? (
+                <span style={{ background: "#333", color: "#aaa", borderRadius: "50%", padding: "2px 7px", fontSize: 11, fontWeight: 800 }}>
+                  {notifications.length}
+                </span>
+              ) : null}
+            </button>
+
+            {/* Notification Drawer Dropdown */}
+            {showNotifDrawer && (
+              <div style={{ position: "absolute", top: 38, right: 0, width: 340, background: "#161616", border: "2px solid #39FF14", borderRadius: 14, boxShadow: "0 10px 40px rgba(0,0,0,0.9)", zIndex: 9999, padding: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #333", paddingBottom: 10, marginBottom: 10 }}>
+                  <div style={{ fontWeight: 800, color: "#fff", fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+                    🔔 Live Order Feed ({notifications.length})
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setNotifications([])}
+                    style={{ background: "transparent", color: "#888", border: "none", fontSize: 11, cursor: "pointer", textDecoration: "underline" }}
+                  >
+                    Clear All
+                  </button>
+                </div>
+
+                {notifications.length === 0 ? (
+                  <div style={{ color: "#888", fontSize: 12, textAlign: "center", padding: "20px 0" }}>
+                    No new orders received during this active session.<br />
+                    <span style={{ fontSize: 11, color: "#666" }}>Listening live for new Firestore orders...</span>
+                  </div>
+                ) : (
+                  <div style={{ maxHeight: 280, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
+                    {notifications.map(n => (
+                      <div
+                        key={n.id}
+                        onClick={() => {
+                          setTab("bookings");
+                          setShowNotifDrawer(false);
+                        }}
+                        style={{ background: "#222", border: "1px solid #333", borderRadius: 10, padding: 10, cursor: "pointer", transition: "all 0.2s" }}
+                        onMouseEnter={e => e.currentTarget.style.borderColor = "#39FF14"}
+                        onMouseLeave={e => e.currentTarget.style.borderColor = "#333"}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, color: "#39FF14", fontWeight: 800, marginBottom: 4 }}>
+                          <span>📦 NEW ORDER</span>
+                          <span style={{ color: "#888" }}>{n.timestamp}</span>
+                        </div>
+                        <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>
+                          {n.order.name || "Customer"} ({n.order.phone || "No phone"})
+                        </div>
+                        <div style={{ color: "#ccc", fontSize: 12, marginTop: 2 }}>
+                          Service: <strong style={{ color: "#FF8C00" }}>{n.order.service}</strong> — ₦{(n.order.paidAmount || n.order.totalEstimatedPrice || 0).toLocaleString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="admin-tabs">
@@ -340,6 +672,23 @@ export default function AdminDash({
       </div>
 
       <div className="admin-body">
+        {tab !== "overview" && (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, background: "#161616", padding: "12px 20px", borderRadius: 12, border: "1px solid #333", flexWrap: "wrap", gap: 12 }}>
+            <button
+              type="button"
+              onClick={() => setTab("overview")}
+              style={{ background: "#39FF14", color: "#000", border: "none", borderRadius: 8, padding: "10px 18px", fontWeight: 900, fontSize: 13, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8, boxShadow: "0 2px 10px rgba(57,255,20,0.2)" }}
+            >
+              ⬅️ Return to Main Modules &amp; Overview Cards
+            </button>
+            <div style={{ color: "#aaa", fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
+              <span>Viewing Section:</span>
+              <span style={{ color: "#39FF14", fontWeight: 800, background: "#222", padding: "4px 12px", borderRadius: 8, border: "1px solid #444" }}>
+                {visibleTabs.find(t => t.id === tab)?.l || tab}
+              </span>
+            </div>
+          </div>
+        )}
 
         {tab === "overview" && <>
           <div className="admin-sec-title" style={{ fontSize: 22, fontWeight: 800 }}>👑 Admin Management Portal &amp; Website Editor</div>
@@ -437,6 +786,68 @@ export default function AdminDash({
                 <button style={{ marginTop: 16, background: "rgba(0,242,254,0.15)", color: "#00F2FE", border: "1px solid rgba(0,242,254,0.4)", padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 800, cursor: "pointer", textAlign: "left", width: "fit-content" }}>
                   View Orders ({bookings.length}) ➔
                 </button>
+              </div>
+
+              {/* Module: Real-Time Order Notifications & Live Alerts */}
+              <div 
+                style={{ background: "linear-gradient(135deg, #161616 0%, #1a2318 100%)", border: "2px solid #39FF14", borderRadius: 14, padding: 20, display: "flex", flexDirection: "column", justifyContent: "space-between", boxShadow: "0 4px 20px rgba(57,255,20,0.15)" }}
+              >
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <div style={{ fontSize: 28 }}>🚨</div>
+                    <span style={{ background: "#39FF14", color: "#000", fontSize: 10, fontWeight: 900, padding: "2px 8px", borderRadius: 10 }}>LIVE FIRESTORE</span>
+                  </div>
+                  <h4 style={{ fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 6 }}>Real-Time Order Alerts &amp; Sound</h4>
+                  <p style={{ fontSize: 12, color: "#aaa", lineHeight: 1.5, marginBottom: 12 }}>
+                    Instant alerts when a customer places an order. Includes audio chime alerts, desktop popups, and live feed feed drawer.
+                  </p>
+
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setSoundEnabled(!soundEnabled); if (!soundEnabled) playAlertChime(); }}
+                      style={{ background: soundEnabled ? "rgba(57,255,20,0.2)" : "#222", border: soundEnabled ? "1px solid #39FF14" : "1px solid #444", color: soundEnabled ? "#39FF14" : "#ccc", padding: "6px 10px", borderRadius: 8, fontSize: 11, fontWeight: 800, cursor: "pointer" }}
+                    >
+                      {soundEnabled ? "🔊 Sound On" : "🔇 Sound Muted"}
+                    </button>
+
+                    {"Notification" in window && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (Notification.permission !== "granted") {
+                            Notification.requestPermission().then(p => {
+                              if (p === "granted") alert("✅ Desktop alerts enabled!");
+                            });
+                          } else {
+                            alert("✅ Desktop alerts are already active!");
+                          }
+                        }}
+                        style={{ background: Notification.permission === "granted" ? "rgba(57,255,20,0.2)" : "#FF5E00", border: Notification.permission === "granted" ? "1px solid #39FF14" : "none", color: Notification.permission === "granted" ? "#39FF14" : "#fff", padding: "6px 10px", borderRadius: 8, fontSize: 11, fontWeight: 800, cursor: "pointer" }}
+                      >
+                        {Notification.permission === "granted" ? "🔔 Desktop On" : "🔔 Enable Desktop"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+                  <button 
+                    type="button"
+                    onClick={handleTestOrderAlert}
+                    style={{ flex: 1, background: "#FF5E00", color: "#fff", border: "none", padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 800, cursor: "pointer" }}
+                  >
+                    ⚡ Test Alert
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => { setShowNotifDrawer(true); setNotifications(prev => prev.map(n => ({ ...n, read: true }))); }}
+                    style={{ background: "#222", color: "#39FF14", border: "1px solid #39FF14", padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 800, cursor: "pointer" }}
+                  >
+                    🔔 View Feed
+                  </button>
+                </div>
               </div>
 
               {/* Module 5: Subscription Plans */}
@@ -1264,13 +1675,38 @@ export default function AdminDash({
           })()}
 
           {/* Email & Realtime Orders Sync Info Banner */}
-          <div style={{ background: "rgba(57, 255, 20, 0.08)", border: "1px solid rgba(57, 255, 20, 0.3)", borderRadius: 12, padding: 16, marginBottom: 20 }}>
-            <div style={{ color: "#39FF14", fontWeight: 800, fontSize: 14, marginBottom: 6, display: "flex", alignItems: "center", gap: 8 }}>
-              📡 Real-Time Order System &amp; Email Dispatch Center
+          <div style={{ background: "rgba(57, 255, 20, 0.08)", border: "1px solid rgba(57, 255, 20, 0.3)", borderRadius: 12, padding: 18, marginBottom: 20 }}>
+            <div style={{ color: "#39FF14", fontWeight: 800, fontSize: 15, marginBottom: 6, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span>📡 Real-Time Order System &amp; Email Dispatch Center</span>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const recipient = settings.email || "Chatkttlimited@gmail.com";
+                    alert(`⏳ Sending test/activation email to ${recipient}...`);
+                    const res = await fetch("/api/send-order-email", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ targetEmail: recipient, isTest: true })
+                    });
+                    const data = await res.json();
+                    if (data.status || data.formsubmit?.success === "true") {
+                      alert(`✅ Test email dispatched to ${recipient}!\n\nIMPORTANT: If this is your first time using FormSubmit, please check your ${recipient} inbox or SPAM folder for an email titled "Action Required: Activate FormSubmit" and click "Activate Form" once.`);
+                    } else {
+                      alert(`⚠️ FormSubmit response: ${data.formsubmit?.message || data.message || "Failed"}.\n\nPlease check ${recipient} inbox/spam for the FormSubmit activation link!`);
+                    }
+                  } catch (err: any) {
+                    alert("Error triggering test email: " + err.message);
+                  }
+                }}
+                style={{ background: "#39FF14", color: "#000", border: "none", borderRadius: 8, padding: "8px 14px", fontWeight: 800, fontSize: 12, cursor: "pointer" }}
+              >
+                ✉️ Trigger Activation / Test Email
+              </button>
             </div>
-            <div style={{ color: "#ccc", fontSize: 13, lineHeight: 1.5 }}>
+            <div style={{ color: "#ccc", fontSize: 13, lineHeight: 1.6 }}>
               • <strong>Live Admin Table:</strong> All customer orders placed on the website are automatically saved to your database and appear in the table below instantly without refreshing.<br />
-              • <strong>Email Notifications ({settings.email || "Chatkttlimited@gmail.com"}):</strong> Order receipts are dispatched via email. If you have not yet activated your email on FormSubmit.co, check your inbox for an activation email from FormSubmit and click <em>"Activate Form"</em> once. After activating, all orders will land straight in your inbox!
+              • <strong>Email Notifications ({settings.email || "Chatkttlimited@gmail.com"}):</strong> Order receipts are dispatched via email. If you have not yet activated your email on FormSubmit.co, click the button above and check your inbox (or Spam folder) for the 1-click activation link from FormSubmit!
             </div>
           </div>
 
