@@ -582,38 +582,39 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
             </div>
           )}
 
-          {/* Direct WhatsApp Chat Section */}
-          <div style={{ background: "#162416", border: "2px solid #25D366", borderRadius: 16, padding: "24px 20px", marginBottom: 24, textAlign: "center" }}>
-            <div style={{ fontSize: 24, marginBottom: 6 }}>💬</div>
-            <h3 style={{ color: "#fff", fontSize: 18, fontWeight: 800, marginBottom: 6 }}>
-              Chat with Us on WhatsApp
+          {/* Direct WhatsApp Chat & Instant Dispatch Section */}
+          <div style={{ background: "#112614", border: "2px solid #25D366", borderRadius: 16, padding: "24px 20px", marginBottom: 20, textAlign: "center", boxShadow: "0 8px 30px rgba(37, 211, 102, 0.2)" }}>
+            <div style={{ fontSize: 28, marginBottom: 4 }}>⚡📱</div>
+            <h3 style={{ color: "#25D366", fontSize: 20, fontWeight: 900, marginBottom: 6 }}>
+              Instant Direct WhatsApp Order Dispatch
             </h3>
-            <p style={{ color: "#bbb", fontSize: 13, marginBottom: 16, maxWidth: 500, margin: "0 auto 16px" }}>
-              Click the button below to send your order reference directly to our customer care team on WhatsApp for live tracking, instant updates, or special instructions.
+            <p style={{ color: "#ddd", fontSize: 14, marginBottom: 16, maxWidth: 520, margin: "0 auto 16px", lineHeight: 1.5 }}>
+              Want immediate 1-second confirmation on your phone? Click below to send a pre-formatted order copy directly to Kings Treat Tech's WhatsApp hotline (<strong style={{ color: "#39FF14" }}>08160880608</strong>)!
             </p>
             <a 
               href={`https://wa.me/${settings?.whatsapp || "2348160880608"}?text=${whatsappMsg}`} 
               target="_blank" 
               rel="noreferrer"
-              style={{ background: "#25D366", color: "#000", padding: "16px 32px", borderRadius: 12, fontWeight: 900, textDecoration: "none", fontSize: 16, display: "inline-flex", alignItems: "center", gap: 10, boxShadow: "0 6px 20px rgba(37, 211, 102, 0.3)" }}
+              style={{ background: "#25D366", color: "#000", padding: "16px 32px", borderRadius: 12, fontWeight: 900, textDecoration: "none", fontSize: 16, display: "inline-flex", alignItems: "center", gap: 10, boxShadow: "0 6px 20px rgba(37, 211, 102, 0.4)" }}
             >
-              <span style={{ fontSize: 20 }}>💬</span> Chat on WhatsApp Now
+              <span style={{ fontSize: 22 }}>💬</span> Send Order Receipt to Admin WhatsApp
             </a>
           </div>
 
-          {/* Email Delivery Status */}
-          <div style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 12, padding: "14px 18px", marginBottom: 24, textAlign: "left" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-              <span style={{ fontSize: 18 }}>
-                {emailStatus === "sent" ? "📩" : "📧"}
-              </span>
-              <strong style={{ color: "#fff", fontSize: 14 }}>
-                {emailStatus === "sent" ? "Automated E-Receipt Dispatched!" : "Order Logged to Store Database"}
+          {/* Email Delivery Status & Alternatives */}
+          <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 14, padding: "18px 20px", marginBottom: 24, textAlign: "left" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+              <span style={{ fontSize: 20 }}>📧</span>
+              <strong style={{ color: "#fff", fontSize: 15, fontWeight: 800 }}>
+                Email Delivery Status ({targetEmail})
               </strong>
             </div>
-            <p style={{ fontSize: 13, color: "#888", margin: 0 }}>
-              Official receipt and dispatch alert routed to <strong>{targetEmail}</strong>.
+            <p style={{ fontSize: 13, color: "#ccc", margin: "0 0 10px 0", lineHeight: 1.5 }}>
+              An automated notification request was dispatched to <strong>{targetEmail}</strong>. 
             </p>
+            <div style={{ background: "rgba(255, 255, 255, 0.05)", borderRadius: 8, padding: "10px 14px", fontSize: 12, color: "#aaa", lineHeight: 1.5 }}>
+              💡 <strong>Note for Gmail:</strong> If the email isn't in your main Inbox, please check your Gmail <strong>Spam / Junk</strong> or <strong>Promotions</strong> folder. You can also click the <strong>Direct Email Receipt</strong> button below to open your email app instantly!
+            </div>
           </div>
 
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginTop: 20 }}>
@@ -621,14 +622,14 @@ export default function BookingPage({ pre, settings, initialCode }: { pre?: stri
               href={`mailto:${targetEmail}?subject=${emailSubject}&body=${emailBody}`}
               target="_blank"
               rel="noreferrer"
-              style={{ background: "#333", color: "#fff", border: "1px solid #555", padding: "12px 20px", borderRadius: 8, fontWeight: 600, textDecoration: "none", fontSize: 14, display: "inline-flex", alignItems: "center", gap: 8 }}
+              style={{ background: "#222", color: "#fff", border: "1px solid #444", padding: "12px 20px", borderRadius: 10, fontWeight: 700, textDecoration: "none", fontSize: 14, display: "inline-flex", alignItems: "center", gap: 8 }}
             >
-              ✉️ Email Receipt
+              ✉️ Direct Email Receipt to Admin
             </a>
 
             <button 
               onClick={() => { setSent(false); setForm({ name: "", email: "", phone: "", altPhone: "", service: pre || "", date: "", time: "", address: "", notes: "" }); setIsExpress(false); setPromoApplied(false); setReferralCode(""); setPaidRef(""); }}
-              style={{ background: "#222", color: "#ccc", border: "1px solid #444", padding: "12px 24px", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 14 }}
+              style={{ background: "#333", color: "#fff", border: "1px solid #555", padding: "12px 24px", borderRadius: 10, fontWeight: 700, cursor: "pointer", fontSize: 14 }}
             >
               ➕ Place Another Order
             </button>

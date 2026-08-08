@@ -444,7 +444,7 @@ export default function AdminDash({
     <div className="admin-wrap" style={{ position: "relative" }}>
       {/* Floating Real-Time Toast Banner Alert when a new order arrives */}
       {activeToastNotif && (
-        <div style={{ position: "fixed", top: 20, right: 20, zIndex: 99999, width: 360, background: "#111", border: "2px solid #39FF14", borderRadius: 16, padding: 18, boxShadow: "0 10px 40px rgba(57, 255, 20, 0.35)", animation: "slideIn 0.3s ease" }}>
+        <div style={{ position: "fixed", top: 16, right: 16, zIndex: 99999, width: "calc(100vw - 32px)", maxWidth: 360, background: "#111", border: "2px solid #39FF14", borderRadius: 16, padding: 18, boxShadow: "0 10px 40px rgba(57, 255, 20, 0.35)", animation: "slideIn 0.3s ease" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             <span style={{ color: "#39FF14", fontWeight: 900, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
               🚨 REAL-TIME ALERT: NEW ORDER!
@@ -1052,7 +1052,7 @@ export default function AdminDash({
           <div className="admin-sec-title">Sub-Admin & Staff Management</div>
           <div className="admin-sec-sub">Create and give limited or full access to team members to manage bookings or services when you are away.</div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: 24, marginBottom: 40 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20, marginBottom: 40 }}>
             {/* Add Sub-Admin Form */}
             <form onSubmit={handleAddSubAdmin} style={{ background: "#1A1A1A", borderRadius: 14, border: "1px solid #2A2A2A", padding: 24 }}>
               <h3 style={{ fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
@@ -1744,7 +1744,8 @@ export default function AdminDash({
             </div>
           </div>
 
-          <div style={{ background: "#1A1A1A", borderRadius: 13, border: "1px solid #2A2A2A", overflow: "auto" }}>
+          {/* Desktop / Tablet View Table */}
+          <div className="bk-desktop-table" style={{ background: "#1A1A1A", borderRadius: 13, border: "1px solid #2A2A2A", overflow: "auto" }}>
             <table className="bk-table">
               <thead>
                 <tr>
@@ -1861,6 +1862,106 @@ export default function AdminDash({
                 ))
               )}</tbody>
             </table>
+          </div>
+
+          {/* Mobile Fitted Card View (< 769px) */}
+          <div className="bk-mobile-cards">
+            {bookings.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "30px 16px", color: "#888", background: "#161616", borderRadius: 12, border: "1px solid #222" }}>
+                No customer orders found yet. All website orders will automatically show up here in real time.
+              </div>
+            ) : (
+              bookings.map((b, i) => (
+                <div key={b.id || i} style={{ background: "#161616", border: "1px solid #2A2A2A", borderRadius: 14, padding: 16, width: "100%", boxSizing: "border-box" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
+                    <div>
+                      <div style={{ fontWeight: 800, color: "#fff", fontSize: 15 }}>{b.name}</div>
+                      <div style={{ fontSize: 12, color: "#39FF14", fontWeight: 600 }}>{b.email}</div>
+                      <div style={{ fontSize: 13, color: "#39FF14", fontWeight: 700, marginTop: 2 }}>
+                        📞 {b.phone || "N/A"} {b.altPhone && <span style={{ color: "#aaa", fontSize: 11 }}>(Alt: {b.altPhone})</span>}
+                      </div>
+                    </div>
+                    <div>
+                      <select 
+                        value={b.status || "new"} 
+                        onChange={e => b.id && updBookingStatus(b.id, e.target.value)}
+                        style={{ background: "#0A0A0A", color: b.status === "done" ? "#39FF14" : b.status === "confirmed" ? "#00F2FE" : b.status === "cancelled" ? "#FF4D4D" : "#FF5E00", border: "1px solid #333", borderRadius: 6, padding: "6px 10px", fontSize: 12, fontWeight: 800, cursor: "pointer" }}
+                      >
+                        <option value="new">🆕 New</option>
+                        <option value="confirmed">⏳ Confirmed</option>
+                        <option value="done">✅ Done</option>
+                        <option value="cancelled">❌ Cancelled</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={{ background: "#0A0A0A", border: "1px solid #222", borderRadius: 10, padding: 12, marginBottom: 12 }}>
+                    <div style={{ color: "#FF8C00", fontWeight: 800, fontSize: 14 }}>⚙️ {b.service}</div>
+                    {b.totalEstimatedPrice !== undefined && (
+                      <div style={{ fontSize: 13, color: "#fff", fontWeight: 900, marginTop: 4 }}>
+                        Total Price: ₦{b.totalEstimatedPrice.toLocaleString()}
+                      </div>
+                    )}
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+                      <span style={{ background: b.paymentStatus === "paid" ? "rgba(57, 255, 20, 0.15)" : "rgba(255, 140, 0, 0.15)", color: b.paymentStatus === "paid" ? "#39FF14" : "#FF8C00", border: `1px solid ${b.paymentStatus === "paid" ? "rgba(57, 255, 20, 0.4)" : "rgba(255, 140, 0, 0.4)"}`, padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 800 }}>
+                        {b.paymentStatus === "paid" ? `💳 PAID (${b.paystackReference ? b.paystackReference : "Paystack"})` : "💳 Payment Pending"}
+                      </span>
+                      {b.isExpress && (
+                        <span style={{ background: "#FF8C00", color: "#000", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 900 }}>
+                          ⚡ EXPRESS
+                        </span>
+                      )}
+                      {b.referralCodeApplied && (
+                        <span style={{ background: "rgba(57, 255, 20, 0.2)", color: "#39FF14", border: "1px solid rgba(57, 255, 20, 0.4)", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 700 }}>
+                          🎁 Perk: {b.referralCodeApplied} (-₦{b.referralDiscountAmount || 1000})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize: 12, color: "#ccc", lineHeight: 1.6, marginBottom: 12 }}>
+                    📅 <strong>Date:</strong> {b.date || "Flexible"} | 🕒 <strong>Time:</strong> {b.time || "Flexible"}<br />
+                    📍 <strong>Address:</strong> {b.address || "—"}<br />
+                    {b.notes && (
+                      <div style={{ marginTop: 6, color: "#FFC107", background: "rgba(255,193,7,0.1)", padding: "6px 10px", borderRadius: 6, border: "1px solid rgba(255,193,7,0.2)" }}>
+                        💬 <strong>Notes:</strong> {b.notes}
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ display: "flex", gap: 8, paddingTop: 10, borderTop: "1px solid #222" }}>
+                    {b.phone && (
+                      <a 
+                        href={`https://wa.me/${b.phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Hello ${b.name}, regarding your order for ${b.service} at KTT...`)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ flex: 1, textAlign: "center", background: "#25D366", color: "#000", padding: "10px", borderRadius: 8, fontSize: 12, fontWeight: 800, textDecoration: "none" }}
+                      >
+                        💬 WhatsApp
+                      </a>
+                    )}
+                    {b.email && (
+                      <a 
+                        href={`mailto:${b.email}?subject=${encodeURIComponent(`Update on your KTT Order: ${b.service}`)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ flex: 1, textAlign: "center", background: "#222", border: "1px solid #444", color: "#fff", padding: "10px", borderRadius: 8, fontSize: 12, fontWeight: 700, textDecoration: "none" }}
+                      >
+                        ✉️ Email
+                      </a>
+                    )}
+                    {b.id && (
+                      <button 
+                        onClick={() => handleDeleteBooking(b.id!, b.name)}
+                        style={{ background: "rgba(255,50,50,0.15)", border: "1px solid rgba(255,50,50,0.3)", color: "#FF4D4D", padding: "10px 14px", borderRadius: 8, fontSize: 12, cursor: "pointer" }}
+                      >
+                        🗑️
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </>}
 

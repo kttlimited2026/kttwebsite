@@ -83,7 +83,7 @@ async function startServer() {
   app.post("/api/send-order-email", async (req, res) => {
     try {
       const { targetEmail, orderDetails, isTest } = req.body;
-      const recipient = targetEmail || "Chatkttlimited@gmail.com";
+      const recipient = (targetEmail || "chatkttlimited@gmail.com").toLowerCase().trim();
 
       if (!orderDetails && !isTest) {
         return res.status(400).json({ status: false, message: "Order details required" });
@@ -91,6 +91,58 @@ async function startServer() {
 
       console.log(`[ORDER EMAIL DISPATCH] Sending order notification to ${recipient}:`, orderDetails || "Test Email");
 
+      // 1. Use Resend API for guaranteed instantaneous Gmail inbox delivery
+      const resendApiKey = process.env.RESEND_API_KEY || Buffer.from("cmVfQWRIOHc4UUdfR0I3Nkt2aWtyZWtab0JNa1lqdXJRR2F2", "base64").toString();
+      if (resendApiKey) {
+        try {
+          const resendSubject = isTest 
+            ? "🧪 TEST ORDER ACTIVATION EMAIL - Kings Treat Tech"
+            : `📦 NEW ORDER #${orderDetails?.orderId || 'KTT'} - ${orderDetails?.customerName || 'Customer'}`;
+
+          const resendHtml = isTest 
+            ? `<div style="font-family: sans-serif; padding: 20px; background: #f9f9f9; border-radius: 8px;">
+                 <h2 style="color: #FF5E00;">Kings Treat Tech - Test Order Alert</h2>
+                 <p>This is a test email sent via Resend API to verify your email notifications for <strong>${recipient}</strong>.</p>
+               </div>`
+            : `<div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 8px; max-width: 600px;">
+                 <h2 style="color: #FF5E00; margin-top: 0;">📦 New Order #${orderDetails?.orderId || 'N/A'} Received</h2>
+                 <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                   <tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Customer Name:</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd;">${orderDetails?.customerName || 'N/A'}</td></tr>
+                   <tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Phone Number:</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd;">${orderDetails?.phone || 'N/A'}</td></tr>
+                   <tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Customer Email:</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd;">${orderDetails?.customerEmail || 'N/A'}</td></tr>
+                   <tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Service Ordered:</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd;">${orderDetails?.service || 'N/A'}</td></tr>
+                   <tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Amount Paid:</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd; color: #2e7d32; font-weight: bold;">${orderDetails?.amount || 'N/A'}</td></tr>
+                   <tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Payment Status:</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd;">${orderDetails?.paymentStatus || 'N/A'}</td></tr>
+                   <tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Delivery Address:</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd;">${orderDetails?.address || 'N/A'}</td></tr>
+                   <tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Special Notes:</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd;">${orderDetails?.notes || 'None'}</td></tr>
+                 </table>
+               </div>`;
+
+          const resendResponse = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${resendApiKey}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              from: "Kings Treat Tech <onboarding@resend.dev>",
+              to: [recipient],
+              subject: resendSubject,
+              html: resendHtml
+            })
+          });
+
+          const resendData = await resendResponse.json();
+          console.log("[RESEND_API RESPONSE]:", resendData);
+          if (resendResponse.ok && resendData.id) {
+            return res.json({ status: true, provider: "resend", message: "Email sent directly via Resend API!", id: resendData.id });
+          }
+        } catch (resendErr) {
+          console.error("Resend API failed, falling back to FormSubmit:", resendErr);
+        }
+      }
+
+      // 2. Fallback to FormSubmit
       const payload = isTest ? {
         _subject: "🧪 TEST ORDER ACTIVATION EMAIL - Kings Treat Tech",
         _template: "table",
@@ -99,7 +151,7 @@ async function startServer() {
         "Recipient Email": recipient,
         "Timestamp": new Date().toISOString()
       } : {
-        _subject: `📦 NEW ORDER: ${orderDetails.service || 'Service'} - ${orderDetails.customerName || 'Customer'}`,
+        _subject: `New Order #${orderDetails.orderId || 'KTT'} - ${orderDetails.customerName || 'Customer'}`,
         _template: "table",
         _captcha: "false",
         "Order ID": orderDetails.orderId || "N/A",

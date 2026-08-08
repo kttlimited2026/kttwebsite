@@ -434,10 +434,34 @@ html, body {
   .price-row{grid-template-columns:1fr;}
   .media-grid-a{grid-template-columns:repeat(3,1fr);}
   .admin-stats-row{grid-template-columns:1fr 1fr;}
+  .admin-body{padding:16px 12px !important; width:100% !important; box-sizing:border-box !important;}
+  .admin-tabs{padding:8px 10px !important; gap:6px !important; -webkit-overflow-scrolling:touch;}
+  .admin-tab{padding:10px 14px !important; font-size:12px !important;}
   .sec-title{font-size:24px;}
   .sec{padding:30px 3%;width:100%;box-sizing:border-box;}
   .form-box{padding:18px 12px;width:100%;box-sizing:border-box;}
   .plan-card{padding:24px 18px;}
+  .bk-desktop-table {
+    display: none !important;
+  }
+  .bk-mobile-cards {
+    display: flex !important;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+@media (min-width: 769px) {
+  .bk-mobile-cards {
+    display: none !important;
+  }
+  .bk-desktop-table {
+    display: block !important;
+    width: 100%;
+    overflow-x: auto;
+  }
 }
 
 @media(max-width:480px){
