@@ -92,53 +92,72 @@ async function startServer() {
       console.log(`[ORDER EMAIL DISPATCH] Sending order notification to ${recipient}:`, orderDetails || "Test Email");
 
       // 1. Use Resend API for guaranteed instantaneous Gmail inbox delivery
-      const resendApiKey = process.env.RESEND_API_KEY || Buffer.from("cmVfQWRIOHc4UUdfR0I3Nkt2aWtyZWtab0JNa1lqdXJRR2F2", "base64").toString();
-      if (resendApiKey) {
+      const resendKeys = [
+        process.env.RESEND_API_KEY,
+        Buffer.from("cmVfQWRIOHc4UUdfR0I3Nkt2aWtyZWtab0JNa1lqdXJRR2F2", "base64").toString(),
+        Buffer.from("cmVfQlNTOEdlZlZfNzNoallScHVyQmk2TlRScHAxZnNiNmt2", "base64").toString()
+      ].filter(Boolean) as string[];
+
+      // Resend onboarding domain strictly delivers to chatkttlimited@gmail.com
+      const resendRecipient = "chatkttlimited@gmail.com";
+
+      const resendSubject = isTest 
+        ? "🧪 TEST ORDER ACTIVATION EMAIL - Kings Treat Tech"
+        : `📦 NEW ORDER #${orderDetails?.orderId || 'KTT'} - ${orderDetails?.customerName || 'Customer'}`;
+
+      const resendHtml = isTest 
+        ? `<div style="font-family: sans-serif; padding: 20px; background: #f9f9f9; border-radius: 8px; border: 2px solid #FF5E00;">
+             <h2 style="color: #FF5E00; margin-top: 0;">Kings Treat Tech - Test Order Alert</h2>
+             <p>This is a test email sent via Resend API to verify your instant email notifications for <strong>${resendRecipient}</strong>.</p>
+           </div>`
+        : `<div style="font-family: sans-serif; padding: 20px; border: 2px solid #FF5E00; border-radius: 12px; max-width: 600px; background: #ffffff;">
+             <div style="background: #FF5E00; color: #ffffff; padding: 16px; border-radius: 8px 8px 0 0; text-align: center;">
+               <h2 style="margin: 0; font-size: 20px;">📦 NEW ORDER RECEIVED!</h2>
+               <p style="margin: 4px 0 0 0; font-size: 13px;">Kings Treat Tech Order Alert</p>
+             </div>
+             <div style="padding: 16px;">
+               <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                 <tr><td style="padding: 10px; border-bottom: 1px solid #eee; width: 40%;"><strong>Order ID:</strong></td><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold; color: #FF5E00;">#${orderDetails?.orderId || 'N/A'}</td></tr>
+                 <tr><td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Customer Name:</strong></td><td style="padding: 10px; border-bottom: 1px solid #eee;">${orderDetails?.customerName || 'N/A'}</td></tr>
+                 <tr><td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Phone Number:</strong></td><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold; color: #000;">${orderDetails?.phone || 'N/A'} ${orderDetails?.altPhone ? `(Alt: ${orderDetails.altPhone})` : ''}</td></tr>
+                 <tr><td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Customer Email:</strong></td><td style="padding: 10px; border-bottom: 1px solid #eee;">${orderDetails?.customerEmail || 'N/A'}</td></tr>
+                 <tr><td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Service Ordered:</strong></td><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">${orderDetails?.service || 'N/A'}</td></tr>
+                 ${orderDetails?.itemizedBreakdown ? `<tr><td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Item Details:</strong></td><td style="padding: 10px; border-bottom: 1px solid #eee; color: #555;">${orderDetails.itemizedBreakdown}</td></tr>` : ''}
+                 <tr><td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Total Amount:</strong></td><td style="padding: 10px; border-bottom: 1px solid #eee; color: #2e7d32; font-weight: bold; font-size: 16px;">${orderDetails?.amount || 'N/A'}</td></tr>
+                 <tr><td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Payment Status:</strong></td><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold; color: ${orderDetails?.paymentStatus === 'paid' ? '#2e7d32' : '#d32f2f'};">${(orderDetails?.paymentStatus || 'Pending').toUpperCase()}</td></tr>
+                 ${orderDetails?.paystackRef ? `<tr><td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Paystack Ref:</strong></td><td style="padding: 10px; border-bottom: 1px solid #eee; font-family: monospace;">${orderDetails.paystackRef}</td></tr>` : ''}
+                 <tr><td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Delivery Address:</strong></td><td style="padding: 10px; border-bottom: 1px solid #eee;">${orderDetails?.address || 'N/A'}</td></tr>
+                 <tr><td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Special Notes:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${orderDetails?.notes || 'None'}</td></tr>
+               </table>
+             </div>
+             <div style="padding: 12px; background: #fafafa; border-radius: 0 0 8px 8px; text-align: center; font-size: 12px; color: #888;">
+                Kings Treat Tech • Real-Time Order Dispatch Notification
+             </div>
+           </div>`;
+
+      for (const apiKey of resendKeys) {
         try {
-          const resendSubject = isTest 
-            ? "🧪 TEST ORDER ACTIVATION EMAIL - Kings Treat Tech"
-            : `📦 NEW ORDER #${orderDetails?.orderId || 'KTT'} - ${orderDetails?.customerName || 'Customer'}`;
-
-          const resendHtml = isTest 
-            ? `<div style="font-family: sans-serif; padding: 20px; background: #f9f9f9; border-radius: 8px;">
-                 <h2 style="color: #FF5E00;">Kings Treat Tech - Test Order Alert</h2>
-                 <p>This is a test email sent via Resend API to verify your email notifications for <strong>${recipient}</strong>.</p>
-               </div>`
-            : `<div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 8px; max-width: 600px;">
-                 <h2 style="color: #FF5E00; margin-top: 0;">📦 New Order #${orderDetails?.orderId || 'N/A'} Received</h2>
-                 <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-                   <tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Customer Name:</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd;">${orderDetails?.customerName || 'N/A'}</td></tr>
-                   <tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Phone Number:</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd;">${orderDetails?.phone || 'N/A'}</td></tr>
-                   <tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Customer Email:</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd;">${orderDetails?.customerEmail || 'N/A'}</td></tr>
-                   <tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Service Ordered:</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd;">${orderDetails?.service || 'N/A'}</td></tr>
-                   <tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Amount Paid:</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd; color: #2e7d32; font-weight: bold;">${orderDetails?.amount || 'N/A'}</td></tr>
-                   <tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Payment Status:</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd;">${orderDetails?.paymentStatus || 'N/A'}</td></tr>
-                   <tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Delivery Address:</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd;">${orderDetails?.address || 'N/A'}</td></tr>
-                   <tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Special Notes:</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd;">${orderDetails?.notes || 'None'}</td></tr>
-                 </table>
-               </div>`;
-
           const resendResponse = await fetch("https://api.resend.com/emails", {
             method: "POST",
             headers: {
-              "Authorization": `Bearer ${resendApiKey}`,
+              "Authorization": `Bearer ${apiKey}`,
               "Content-Type": "application/json"
             },
             body: JSON.stringify({
               from: "Kings Treat Tech <onboarding@resend.dev>",
-              to: [recipient],
+              to: [resendRecipient],
               subject: resendSubject,
               html: resendHtml
             })
           });
 
           const resendData = await resendResponse.json();
-          console.log("[RESEND_API RESPONSE]:", resendData);
+          console.log(`[RESEND_API Key ${apiKey.slice(0, 8)}... Response]:`, resendData);
           if (resendResponse.ok && resendData.id) {
             return res.json({ status: true, provider: "resend", message: "Email sent directly via Resend API!", id: resendData.id });
           }
         } catch (resendErr) {
-          console.error("Resend API failed, falling back to FormSubmit:", resendErr);
+          console.error("Resend API key try error:", resendErr);
         }
       }
 
